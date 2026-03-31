@@ -5,25 +5,11 @@
   <style>
     body { font-family: Arial; padding: 15px; background:#f2f2f2; }
     h2 { text-align:center; }
-    textarea {
-      width: 100%;
-      height: 150px;
-      margin-top:10px;
-      font-size:16px;
-    }
-    select, button {
-      padding: 10px;
-      margin-top: 10px;
-      width: 100%;
-      font-size:16px;
-    }
-    #result {
-      margin-top: 15px;
-      font-weight: bold;
-      background: white;
-      padding: 10px;
-      border-radius: 5px;
-    }
+    textarea { width: 100%; height: 150px; margin-top:10px; font-size:16px; }
+    select, button { padding: 10px; margin-top: 10px; width: 100%; font-size:16px; }
+    #result { margin-top: 15px; background: white; padding: 10px; border-radius: 5px; }
+    .wrong { color: red; }
+    .correct { color: green; }
   </style>
 </head>
 
@@ -35,7 +21,7 @@
 
 <select id="dictationSelect" onchange="loadDictation()">
   <option value="0">Select Dictation</option>
-  <option value="1">Dictation 1</option>
+  <option value="1">Dictation 1 (SSC)</option>
 </select>
 
 <audio id="audio" controls style="width:100%; margin-top:10px;"></audio>
@@ -50,8 +36,9 @@
 <script>
 let startTime;
 let timer;
-let totalTime = 900; // 15 min
+let totalTime = 900;
 
+// ✅ FULL DICTATION
 let dictations = {
   1: {
     text: "Mr. Vice Chairman Sir I thank you for giving me this opportunity to speak on the Banking Public Financial Institution and Negotiable Instruments Law Amendment Bill 2008. Sir if we go back to the history when the announcement was made by Smt. Indira Gandhi our former Prime Minister we had seen that there was opposition even from the Congressman against the progressive thinking and they said that the banks should not be nationalised. But Indiraji was committed to it. She made it a point to see that the banks are nationalised so that the gates are opened for the purpose of helping the poor and the downtrodden. Sir we have to accept the fact that the banks have become public institutions nowadays and even the poor people can go there and get loans. I would like to submit that in some banks the system of lending money and providing financial assistance to the small businessmen agriculturists and the persons who are small vendors has not been taken very seriously. In the last year Budget the 2008-09 Budget which was presented by the then Finance Minister the thrust was given to agriculture.",
@@ -59,6 +46,7 @@ let dictations = {
   }
 };
 
+// Load dictation
 function loadDictation() {
   let id = document.getElementById("dictationSelect").value;
   if (id == 0) return;
@@ -72,6 +60,7 @@ function loadDictation() {
   document.getElementById("timer").innerHTML = "Time Left: 15:00";
 }
 
+// Timer start
 function startTest() {
   startTime = new Date();
 
@@ -82,8 +71,7 @@ function startTest() {
     let seconds = totalTime % 60;
 
     document.getElementById("timer").innerHTML =
-      "Time Left: " +
-      minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+      "Time Left: " + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
 
     if (totalTime <= 0) {
       clearInterval(timer);
@@ -92,6 +80,7 @@ function startTest() {
   }, 1000);
 }
 
+// Submit test
 function submitTest() {
   clearInterval(timer);
 
@@ -102,29 +91,70 @@ function submitTest() {
   let originalWords = originalText.split(/\s+/);
   let typedWords = typedText.split(/\s+/);
 
+  let i = 0, j = 0;
   let mistakes = 0;
-  let maxLength = Math.max(originalWords.length, typedWords.length);
 
-  for (let i = 0; i < maxLength; i++) {
-    if (typedWords[i] !== originalWords[i]) {
-      mistakes++;
+  let wrongWords = [];
+  let missingWords = [];
+  let extraWords = [];
+
+  let comparison = "";
+
+  while (i < originalWords.length && j < typedWords.length) {
+    if (originalWords[i] === typedWords[j]) {
+      comparison += "<span class='correct'>" + typedWords[j] + "</span> ";
+      i++; j++;
+    } else {
+      if (originalWords[i + 1] === typedWords[j]) {
+        missingWords.push(originalWords[i]);
+        mistakes++;
+        comparison += "<span class='wrong'>[Missing: " + originalWords[i] + "]</span> ";
+        i++;
+      } else if (originalWords[i] === typedWords[j + 1]) {
+        extraWords.push(typedWords[j]);
+        mistakes++;
+        comparison += "<span class='wrong'>" + typedWords[j] + "</span> ";
+        j++;
+      } else {
+        wrongWords.push(typedWords[j]);
+        mistakes++;
+        comparison += "<span class='wrong'>" + typedWords[j] + "</span> ";
+        i++; j++;
+      }
     }
+  }
+
+  while (i < originalWords.length) {
+    missingWords.push(originalWords[i]);
+    comparison += "<span class='wrong'>[Missing: " + originalWords[i] + "]</span> ";
+    mistakes++;
+    i++;
+  }
+
+  while (j < typedWords.length) {
+    extraWords.push(typedWords[j]);
+    comparison += "<span class='wrong'>" + typedWords[j] + "</span> ";
+    mistakes++;
+    j++;
   }
 
   let originalTotal = originalWords.length;
   let typedTotal = typedWords.length;
-
   let errorPercent = ((mistakes / originalTotal) * 100).toFixed(2);
-
-  // Qualify rule (8%)
   let status = (errorPercent <= 8) ? "✅ QUALIFY" : "❌ DISQUALIFY";
 
   document.getElementById("result").innerHTML =
-    "Original Total Words: " + originalTotal +
-    "<br>Typed Words: " + typedTotal +
-    "<br>Total Mistakes: " + mistakes +
-    "<br>Error %: " + errorPercent + "%" +
-    "<br><br><b>Status: " + status + "</b>";
+    "<b>Original Total Words:</b> " + originalTotal +
+    "<br><b>Typed Words:</b> " + typedTotal +
+    "<br><b>Total Mistakes:</b> " + mistakes +
+    "<br><b>Error %:</b> " + errorPercent + "%" +
+    "<br><br><b>Status:</b> " + status +
+
+    "<br><br><b>Wrong Words:</b> " + (wrongWords.join(", ") || "None") +
+    "<br><b>Missing Words:</b> " + (missingWords.join(", ") || "None") +
+    "<br><b>Extra Words:</b> " + (extraWords.join(", ") || "None") +
+
+    "<br><br><b>Comparison:</b><br>" + comparison;
 }
 </script>
 
