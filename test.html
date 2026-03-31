@@ -7,6 +7,7 @@
     body { font-family: Arial; text-align:center; background:#f2f2f2; padding:10px; }
     textarea { width:95%; height:150px; margin-top:10px; }
     button { padding:10px; width:95%; margin-top:10px; }
+    select { padding:8px; width:95%; margin-top:10px; }
     #result { margin-top:15px; background:#fff; padding:10px; border-radius:8px; }
   </style>
 </head>
@@ -17,9 +18,11 @@
 
 <p id="timer">Time Left: 15:00</p>
 
-<audio controls>
-  <source src="dict1.mp3" type="audio/mpeg">
-</audio>
+<!-- 🔽 Dropdown -->
+<select id="dictSelect" onchange="loadDictation()"></select>
+
+<!-- 🔊 Audio -->
+<audio id="audioPlayer" controls></audio>
 
 <textarea id="text" placeholder="Type your transcription here..."></textarea>
 
@@ -30,8 +33,37 @@
 
 <script>
 
-// ORIGINAL TEXT
-let originalText = `Mr. Vice Chairman Sir I thank you for giving me this opportunity to speak on the Banking Public Financial Institutions and Negotiable Instruments Law Amendment Bill 2008. Sir if we go back to the history when the announcement was made by Smt. Indira Gandhi our former Prime Minister we had seen that there was opposition even from the Congressman against the progressive thinking and they said that the banks should not be nationalised. But Indiraji was committed to it. She made it a point to see that the banks are nationalised so that the gates are opened for the purpose of helping the poor and the downtrodden. Sir we have to accept the fact that the banks have become public institutions nowadays and even the poor people can go there and get loans. I would like to submit that in some banks the system of lending money and providing financial assistance to the small businessmen agriculturists and the persons who are small vendors has not been taken very seriously. In the last year Budget the 2008-09 Budget which was presented by the then Finance Minister the thrust was given to agriculture.`;
+// GLOBAL
+let dictations = [];
+let originalText = "";
+
+// 🔥 LOAD JSON
+fetch("dictations.json")
+  .then(res => res.json())
+  .then(data => {
+    dictations = data;
+
+    let select = document.getElementById("dictSelect");
+
+    dictations.forEach((d, index) => {
+      let option = document.createElement("option");
+      option.value = index;
+      option.text = d.name;
+      select.appendChild(option);
+    });
+
+    loadDictation(); // load first
+  });
+
+// LOAD SELECTED
+function loadDictation(){
+  let index = document.getElementById("dictSelect").value;
+
+  originalText = dictations[index].text;
+
+  let audio = document.getElementById("audioPlayer");
+  audio.src = dictations[index].audio;
+}
 
 // TIMER
 let time = 900;
@@ -66,7 +98,7 @@ let ignoreMap = {
   "hon":"honourable","honourable":"hon"
 };
 
-// MAIN LOGIC (STRONG ALIGNMENT)
+// MAIN LOGIC
 function submitTest(){
 
   clearInterval(timer);
@@ -84,32 +116,29 @@ function submitTest(){
     let ow = normalize(o[i]).toLowerCase();
     let tw = normalize(t[j]).toLowerCase();
 
-    // correct
     if(ow === tw){
       i++; j++;
       continue;
     }
 
-    // ignore words
     if(ignoreMap[ow] === tw || ignoreMap[tw] === ow){
       i++; j++;
       continue;
     }
 
-    // 🔥 STRONG ALIGNMENT (MAIN FIX)
     let found = false;
 
     for(let k=1; k<=3; k++){
 
       if(o[i+k] && normalize(o[i+k]).toLowerCase() === tw){
-        full += k; // missing words
+        full += k;
         i += k;
         found = true;
         break;
       }
 
       if(t[j+k] && normalize(t[j+k]).toLowerCase() === ow){
-        full += k; // extra words
+        full += k;
         j += k;
         found = true;
         break;
@@ -118,23 +147,19 @@ function submitTest(){
 
     if(found) continue;
 
-    // singular/plural → half
     if(ow+"s" === tw || ow === tw+"s"){
       half++;
       i++; j++;
       continue;
     }
 
-    // wrong word
     full++;
     i++; j++;
   }
 
-  // remaining words
   while(i < o.length){ full++; i++; }
   while(j < t.length){ full++; j++; }
 
-  // RESULT CALCULATION
   let totalError = full + (half * 0.5);
   let errorPercent = ((totalError / o.length) * 100).toFixed(2);
 
@@ -150,7 +175,6 @@ function submitTest(){
     "<br><br>Status: "+status+
     "<br><br><button onclick='viewDetail()'>View Detail Result</button>";
 
-  // SAVE DATA
   localStorage.setItem("original", originalText);
   localStorage.setItem("typed", typedText);
 }
