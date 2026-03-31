@@ -1,20 +1,82 @@
-function normalize(word) {
-  return word.replace(/[.,]/g, "");
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Steno Test</title>
+
+  <style>
+    body { font-family: Arial; text-align:center; background:#f2f2f2; padding:10px; }
+    textarea { width:95%; height:150px; margin-top:10px; }
+    button { padding:10px; width:95%; margin-top:10px; }
+    #result { margin-top:15px; background:#fff; padding:10px; border-radius:8px; }
+  </style>
+</head>
+
+<body>
+
+<h2>Steno Dictation Practice</h2>
+
+<p id="timer">Time Left: 15:00</p>
+
+<audio id="audio" controls>
+  <source src="dict1.mp3" type="audio/mpeg">
+</audio>
+
+<textarea id="text" placeholder="Type your transcription here..."></textarea>
+
+<button onclick="startTest()">Start</button>
+<button onclick="submitTest()">Submit</button>
+
+<div id="result"></div>
+
+<script>
+
+// 🔹 ORIGINAL TEXT (tumhara full matter)
+let originalText = `Mr. Vice Chairman Sir I thank you for giving me this opportunity to speak on the Banking Public Financial Institutions and Negotiable Instruments Law Amendment Bill 2008. Sir if we go back to the history when the announcement was made by Smt. Indira Gandhi our former Prime Minister we had seen that there was opposition even from the Congressman against the progressive thinking and they said that the banks should not be nationalised. But Indiraji was committed to it. She made it a point to see that the banks are nationalised so that the gates are opened for the purpose of helping the poor and the downtrodden. Sir we have to accept the fact that the banks have become public institutions nowadays and even the poor people can go there and get loans. I would like to submit that in some banks the system of lending money and providing financial assistance to the small businessmen agriculturists and the persons who are small vendors has not been taken very seriously. In the last year Budget the 2008-09 Budget which was presented by the then Finance Minister the thrust was given to agriculture.`;
+
+// 🔹 TIMER
+let time = 900;
+let timer;
+
+function startTest(){
+  document.getElementById("audio").play();
+
+  timer = setInterval(()=>{
+    time--;
+
+    let min = Math.floor(time/60);
+    let sec = time % 60;
+
+    document.getElementById("timer").innerText =
+      "Time Left: " + min + ":" + (sec<10?"0"+sec:sec);
+
+    if(time <= 0){
+      clearInterval(timer);
+      submitTest();
+    }
+
+  },1000);
 }
 
-// ignore mapping
+// 🔹 NORMALIZE
+function normalize(word){
+  return word.replace(/[.,]/g,"");
+}
+
+// 🔹 IGNORE WORDS
 let ignoreMap = {
-  "%": "percent",
-  "percent": "%",
-  "rs": "rupees",
-  "rupees": "rs",
-  "vs": "versus",
-  "v/s": "versus",
-  "hon": "honourable",
-  "honourable": "hon"
+  "%":"percent",
+  "percent":"%",
+  "rs":"rupees",
+  "rupees":"rs",
+  "vs":"versus",
+  "v/s":"versus",
+  "hon":"honourable",
+  "honourable":"hon"
 };
 
-function submitTest() {
+// 🔹 SUBMIT
+function submitTest(){
+
   clearInterval(timer);
 
   let typedText = document.getElementById("text").value;
@@ -22,10 +84,11 @@ function submitTest() {
   let o = originalText.trim().split(/\s+/);
   let t = typedText.trim().split(/\s+/);
 
-  let i = 0, j = 0;
-  let full = 0, half = 0;
+  let i=0, j=0;
 
-  while (i < o.length && j < t.length) {
+  let full=0, half=0;
+
+  while(i<o.length && j<t.length){
 
     let ow = o[i];
     let tw = t[j];
@@ -33,66 +96,77 @@ function submitTest() {
     let owClean = normalize(ow).toLowerCase();
     let twClean = normalize(tw).toLowerCase();
 
-    // ✔ ignore mapping
-    if (ignoreMap[owClean] === twClean || ignoreMap[twClean] === owClean) {
-      i++; j++;
+    // ignore
+    if(ignoreMap[owClean]===twClean || ignoreMap[twClean]===owClean){
+      i++; j++; continue;
+    }
+
+    // correct
+    if(owClean===twClean){
+      i++; j++; continue;
+    }
+
+    // singular/plural
+    if(owClean+"s"===twClean || owClean===twClean+"s"){
+      half++;
+      i++; j++; continue;
+    }
+
+    // capital mistake
+    if(normalize(ow)===normalize(tw)){
+      full++;
+      i++; j++; continue;
+    }
+
+    // missing
+    if(o[i+1] && normalize(o[i+1]).toLowerCase()===twClean){
+      full++;
+      i++;
       continue;
     }
 
-    // ✔ exact match
-    if (owClean === twClean) {
-      i++; j++;
-    }
-
-    // ✔ singular/plural → half mistake
-    else if (owClean + "s" === twClean || owClean === twClean + "s") {
-      half++;
-      i++; j++;
-    }
-
-    // ✔ capital mistake (case mismatch)
-    else if (normalize(ow) === normalize(tw)) {
-      full++;
-      i++; j++;
-    }
-
-    // ✔ missing word
-    else if (o[i+1] && normalize(o[i+1]).toLowerCase() === twClean) {
-      full++;
-      i++;
-    }
-
-    // ✔ extra word
-    else if (t[j+1] && owClean === normalize(t[j+1]).toLowerCase()) {
+    // extra
+    if(t[j+1] && owClean===normalize(t[j+1]).toLowerCase()){
       full++;
       j++;
+      continue;
     }
 
-    // ✔ wrong word
-    else {
-      full++;
-      i++; j++;
-    }
+    // wrong
+    full++;
+    i++; j++;
   }
 
   // remaining
-  full += (o.length - i);
-  full += (t.length - j);
+  while(i<o.length){ full++; i++; }
+  while(j<t.length){ full++; j++; }
 
-  let totalError = full + (half * 0.5);
-  let errorPercent = ((totalError / o.length) * 100).toFixed(2);
+  // result
+  let totalError = full + (half*0.5);
+  let errorPercent = ((totalError/o.length)*100).toFixed(2);
 
   let status = errorPercent <= 8 ? "✅ QUALIFY" : "❌ DISQUALIFY";
 
   document.getElementById("result").innerHTML =
-    "<b>Total Words:</b> " + o.length +
-    "<br><b>Full Mistakes:</b> " + full +
-    "<br><b>Half Mistakes:</b> " + half +
-    "<br><b>Total Error:</b> " + totalError +
-    "<br><b>Error %:</b> " + errorPercent +
-    "<br><br><b>Status:</b> " + status +
+    "Original Total Words: "+o.length+
+    "<br>Typed Words: "+t.length+
+    "<br>Full Mistakes: "+full+
+    "<br>Half Mistakes: "+half+
+    "<br>Error %: "+errorPercent+
+    "<br><br>Status: "+status+
     "<br><br><button onclick='viewDetail()'>View Detail Result</button>";
 
-  localStorage.setItem("typed", typedText);
+  // save data
   localStorage.setItem("original", originalText);
+  localStorage.setItem("typed", typedText);
 }
+
+// 🔹 DETAIL PAGE
+function viewDetail(){
+  window.location.href = "result.html";
+}
+
+</script>
+
+</body>
+</html>
