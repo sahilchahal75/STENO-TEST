@@ -42,26 +42,12 @@
       cursor:pointer;
     }
 
-    button:hover {
-      background:#1d4ed8;
-    }
-
     #result {
       margin-top:15px;
       background:#e6f4ea;
       padding:10px;
       border-radius:8px;
     }
-
-    .topbar {
-      display:flex;
-      justify-content:space-between;
-      margin-bottom:10px;
-    }
-
-    .login-btn { background:#10b981; }
-    .logout-btn { background:#ef4444; }
-
   </style>
 </head>
 
@@ -69,43 +55,24 @@
 
 <div class="container">
 
-  <!-- 🔥 HEADER -->
-  <div class="topbar">
-    <h3>Steno Portal</h3>
-    <div>
-      <button class="login-btn" onclick="login()">Login</button>
-      <button class="logout-btn" onclick="logout()">Logout</button>
-    </div>
-  </div>
+<h2>Steno Dictation Practice</h2>
 
-  <h2>Steno Dictation Practice</h2>
+<p id="timer">Time Left: 15:00</p>
 
-  <p id="timer">Time Left: 15:00</p>
+<select id="dictSelect" onchange="loadDictation()"></select>
 
-  <!-- 🔽 DROPDOWN -->
-  <select id="dictSelect" onchange="loadDictation()"></select>
+<audio id="audioPlayer" controls style="width:100%; margin-top:10px;"></audio>
 
-  <!-- 🔊 AUDIO -->
-  <audio id="audioPlayer" controls style="width:100%; margin-top:10px;"></audio>
+<textarea id="text" placeholder="Type your transcription here..."></textarea>
 
-  <textarea id="text" placeholder="Type your transcription here..."></textarea>
+<button onclick="startTest()">Start</button>
+<button onclick="submitTest()">Submit</button>
 
-  <button onclick="startTest()">Start</button>
-  <button onclick="submitTest()">Submit</button>
-
-  <div id="result"></div>
+<div id="result"></div>
 
 </div>
 
 <script>
-
-// LOGIN (basic placeholder)
-function login(){
-  alert("Login system already connected with Firebase (next step upgrade)");
-}
-function logout(){
-  alert("Logout successful");
-}
 
 // GLOBAL
 let dictations = [];
@@ -113,35 +80,28 @@ let originalText = "";
 
 // LOAD JSON
 fetch("dictations.json")
-  .then(res => res.json())
-  .then(data => {
+.then(res => res.json())
+.then(data => {
 
-    dictations = data;
+  dictations = data;
 
-    let select = document.getElementById("dictSelect");
+  let select = document.getElementById("dictSelect");
 
-    select.innerHTML = "";
-
-    dictations.forEach((d, index) => {
-      let option = document.createElement("option");
-      option.value = index;
-      option.text = d.name;
-      select.appendChild(option);
-    });
-
-    loadDictation();
+  data.forEach((d,i)=>{
+    let opt = document.createElement("option");
+    opt.value = i;
+    opt.text = d.name;
+    select.appendChild(opt);
   });
 
-// LOAD SELECTED
+  loadDictation();
+});
+
+// LOAD
 function loadDictation(){
-  let index = document.getElementById("dictSelect").value;
-
-  if(dictations.length === 0) return;
-
-  originalText = dictations[index].text;
-
-  let audio = document.getElementById("audioPlayer");
-  audio.src = dictations[index].audio;
+  let i = document.getElementById("dictSelect").value;
+  originalText = dictations[i].text;
+  document.getElementById("audioPlayer").src = dictations[i].audio;
 }
 
 // TIMER
@@ -155,13 +115,13 @@ function startTest(){
   timer = setInterval(()=>{
     time--;
 
-    let min = Math.floor(time/60);
-    let sec = time % 60;
+    let m = Math.floor(time/60);
+    let s = time%60;
 
     document.getElementById("timer").innerText =
-      "Time Left: " + min + ":" + (sec<10?"0"+sec:sec);
+    "Time Left: "+m+":"+(s<10?"0"+s:s);
 
-    if(time <= 0){
+    if(time<=0){
       clearInterval(timer);
       submitTest();
     }
@@ -171,10 +131,10 @@ function startTest(){
 
 // NORMALIZE
 function normalize(word){
-  return word.replace(/[.,]/g,"");
+  return word.replace(/[.,]/g,"").toLowerCase();
 }
 
-// IGNORE MAP
+// IGNORE WORDS
 let ignoreMap = {
   "%":"percent","percent":"%",
   "rs":"rupees","rupees":"rs",
@@ -182,7 +142,7 @@ let ignoreMap = {
   "hon":"honourable","honourable":"hon"
 };
 
-// 🔥 FINAL LOGIC (FIXED)
+// 🔥 FINAL LOGIC
 function submitTest(){
 
   clearInterval(timer);
@@ -197,8 +157,8 @@ function submitTest(){
 
   while(i < o.length && j < t.length){
 
-    let ow = normalize(o[i]).toLowerCase();
-    let tw = normalize(t[j]).toLowerCase();
+    let ow = normalize(o[i]);
+    let tw = normalize(t[j]);
 
     // correct
     if(ow === tw){
@@ -206,33 +166,44 @@ function submitTest(){
       continue;
     }
 
-    // ignore words
+    // ignore
     if(ignoreMap[ow] === tw || ignoreMap[tw] === ow){
       i++; j++;
       continue;
     }
 
-    // 🔥 alignment fix (1 step)
-    if(o[i+1] && normalize(o[i+1]).toLowerCase() === tw){
-      full++;
-      i++;
-      continue;
+    // 🔥 STRONG ALIGNMENT
+    let matched = false;
+
+    for(let k=1; k<=5; k++){
+
+      // missing
+      if(o[i+k] && normalize(o[i+k]) === tw){
+        full += k;
+        i += k;
+        matched = true;
+        break;
+      }
+
+      // extra
+      if(t[j+k] && normalize(t[j+k]) === ow){
+        full += k;
+        j += k;
+        matched = true;
+        break;
+      }
     }
 
-    if(t[j+1] && normalize(t[j+1]).toLowerCase() === ow){
-      full++;
-      j++;
-      continue;
-    }
+    if(matched) continue;
 
-    // singular/plural = half
+    // half mistake (singular/plural)
     if(ow+"s" === tw || ow === tw+"s"){
       half++;
       i++; j++;
       continue;
     }
 
-    // wrong
+    // wrong word
     full++;
     i++; j++;
   }
@@ -241,7 +212,7 @@ function submitTest(){
   while(i < o.length){ full++; i++; }
   while(j < t.length){ full++; j++; }
 
-  // FINAL RESULT
+  // 🔥 FINAL FORMULA
   let totalError = full + (half * 0.5);
   let errorPercent = ((totalError / o.length) * 100).toFixed(2);
 
@@ -256,7 +227,6 @@ function submitTest(){
     "<br><br><b>Status:</b> "+status+
     "<br><br><button onclick='viewDetail()'>View Detail Result</button>";
 
-  // SAVE FOR RESULT PAGE
   localStorage.setItem("original", originalText);
   localStorage.setItem("typed", typedText);
 }
