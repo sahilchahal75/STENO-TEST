@@ -6,15 +6,15 @@
   <style>
     body {
       font-family: Arial;
-      background: #f2f2f2;
+      background: linear-gradient(135deg,#1e3c72,#2a5298);
       text-align: center;
       margin: 0;
       padding: 0;
+      color:white;
     }
 
     h1 {
-      background: #333;
-      color: white;
+      background: rgba(0,0,0,0.3);
       padding: 15px;
       margin: 0;
     }
@@ -26,18 +26,19 @@
 
     .card {
       background: white;
+      color:black;
       margin: 15px auto;
       padding: 25px;
       width: 90%;
       max-width: 400px;
       border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       cursor: pointer;
-      transition: 0.2s;
+      transition: 0.3s;
     }
 
     .card:hover {
-      transform: scale(1.03);
+      transform: scale(1.05);
       background: #e6f0ff;
     }
 
@@ -51,17 +52,39 @@
       border-left: 5px solid green;
     }
 
+    .menu {
+      margin-top:20px;
+    }
+
+    .menu button {
+      padding:10px;
+      margin:5px;
+      border:none;
+      border-radius:6px;
+      cursor:pointer;
+      background:#00c6ff;
+      color:black;
+      font-weight:bold;
+    }
+
   </style>
 </head>
 
 <body>
 
-<h1>Steno Practice Portal</h1>
+<h1>🔥 Steno Practice Portal</h1>
+
+<!-- 🔹 Top Menu -->
+<div class="menu">
+  <button onclick="go('test.html')">📝 Start Test</button>
+  <button onclick="go('user.html')">📊 My Progress</button>
+  <button onclick="go('leaderboard.html')">🏆 Leaderboard</button>
+</div>
 
 <div class="container">
 
   <!-- KC Magazine -->
-  <div class="card active" onclick="goToKC()">
+  <div class="card active" onclick="go('test.html')">
     <h3>KC Magazine</h3>
     <p>Practice Dictation</p>
   </div>
@@ -82,9 +105,8 @@
 
 <script>
 
-function goToKC() {
-  // 👉 next page (typing page)
-  window.location.href = "test.html";
+function go(page){
+  window.location.href = page;
 }
 
 </script>
