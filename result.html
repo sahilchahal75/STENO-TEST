@@ -4,60 +4,52 @@
   <title>Detail Result</title>
 
   <style>
-    body { font-family: Arial; padding: 15px; background:#f2f2f2; }
-    h2 { text-align:center; }
-
-    #box {
-      background:white;
-      padding:15px;
-      border-radius:10px;
-    }
-
-    .correct { color: green; }
-    .wrong { color: red; }
-    .extra { color: blue; }
-    .missing { color: black; font-weight:bold; }
-
-    .formula {
-      margin-top:20px;
-      background:#fff;
-      padding:10px;
-      border-radius:8px;
-    }
+    body { font-family: Arial; background:#f2f2f2; padding:10px; }
+    .box { background:#fff; padding:10px; border-radius:8px; margin-bottom:10px; }
+    .correct { color:green; }
+    .wrong { color:red; }
+    .extra { color:blue; }
+    .missing { color:black; font-weight:bold; }
   </style>
 </head>
 
 <body>
 
-<h2>Detail Result</h2>
+<h2 style="text-align:center;">Detail Result</h2>
 
-<div id="box">
-  <div id="summary"></div>
-  <hr>
-  <div id="words"></div>
+<div class="box" id="summary"></div>
+<div class="box" id="comparison"></div>
+
+<div class="box">
+<b>Formula:</b><br>
+Total Error = Full Mistake + (Half Mistake × 0.5)<br>
+Error % = (Total Error ÷ Total Words) × 100<br>
+Qualify = Error % ≤ 8%
 </div>
 
-<div class="formula">
-  <b>Formula:</b><br>
-  Total Error = Full Mistake + (Half Mistake × 0.5)<br>
-  Error % = (Total Error ÷ Total Words) × 100<br>
-  Qualify = Error % ≤ 8%
-</div>
-
-<div class="formula">
-  <b>Colour Meaning:</b><br><br>
-  <span style="color:green;">Green</span> → Correct<br>
-  <span style="color:red;">Red</span> → Wrong<br>
-  <span style="color:blue;">Blue</span> → Extra<br>
-  <span style="color:black;">Black</span> → Missing
+<div class="box">
+<b>Colour Meaning:</b><br>
+<span class="correct">Green</span> → Correct<br>
+<span class="wrong">Red</span> → Wrong / Spelling / Capital Error<br>
+<span class="extra">Blue</span> → Extra Word<br>
+<span class="missing">Black</span> → Missing Word
 </div>
 
 <script>
 
+// LOAD DATA
+let originalText = localStorage.getItem("original");
+let typedText = localStorage.getItem("typed");
+
+let o = originalText.trim().split(/\s+/);
+let t = typedText.trim().split(/\s+/);
+
+// NORMALIZE
 function normalize(word){
   return word.replace(/[.,]/g,"");
 }
 
+// IGNORE
 let ignoreMap = {
   "%":"percent","percent":"%",
   "rs":"rupees","rupees":"rs",
@@ -65,16 +57,11 @@ let ignoreMap = {
   "hon":"honourable","honourable":"hon"
 };
 
-let original = localStorage.getItem("original") || "";
-let typed = localStorage.getItem("typed") || "";
-
-let o = original.trim().split(/\s+/);
-let t = typed.trim().split(/\s+/);
-
 let i=0, j=0;
 let full=0, half=0;
+let missing=0, extra=0, wrong=0;
 
-let output="";
+let resultHTML = "";
 
 while(i < o.length && j < t.length){
 
@@ -83,76 +70,99 @@ while(i < o.length && j < t.length){
 
   // correct
   if(ow === tw){
-    output += "<span class='correct'>" + t[j] + "</span> ";
+    resultHTML += "<span class='correct'>"+o[i]+"</span> ";
     i++; j++;
     continue;
   }
 
   // ignore
   if(ignoreMap[ow] === tw || ignoreMap[tw] === ow){
-    output += "<span class='correct'>" + t[j] + "</span> ";
+    resultHTML += "<span class='correct'>"+o[i]+"</span> ";
     i++; j++;
     continue;
   }
 
-  // SHIFT FIX
-  if(o[i+1] && normalize(o[i+1]).toLowerCase() === tw){
-    output += "<span class='missing'>[Missing: " + o[i] + "]</span> ";
-    full++;
-    i++;
-    continue;
+  // 🔥 alignment fix
+  let found = false;
+
+  for(let k=1; k<=3; k++){
+
+    if(o[i+k] && normalize(o[i+k]).toLowerCase() === tw){
+      // missing
+      for(let m=0; m<k; m++){
+        resultHTML += "<span class='missing'>["+o[i+m]+"]</span> ";
+        missing++;
+        full++;
+      }
+      i += k;
+      found = true;
+      break;
+    }
+
+    if(t[j+k] && normalize(t[j+k]).toLowerCase() === ow){
+      // extra
+      for(let m=0; m<k; m++){
+        resultHTML += "<span class='extra'>"+t[j+m]+"</span> ";
+        extra++;
+        full++;
+      }
+      j += k;
+      found = true;
+      break;
+    }
   }
 
-  if(t[j+1] && normalize(t[j+1]).toLowerCase() === ow){
-    output += "<span class='extra'>" + t[j] + "</span> ";
-    full++;
-    j++;
-    continue;
-  }
+  if(found) continue;
 
   // singular/plural
   if(ow+"s" === tw || ow === tw+"s"){
-    output += "<span class='wrong'>" + t[j] + "</span> ";
+    resultHTML += "<span class='wrong'>"+t[j]+"</span> ";
     half++;
     i++; j++;
     continue;
   }
 
   // wrong
-  output += "<span class='wrong'>" + t[j] + "</span> ";
+  resultHTML += "<span class='wrong'>"+t[j]+"</span> ";
+  wrong++;
   full++;
   i++; j++;
 }
 
 // remaining
 while(i < o.length){
-  output += "<span class='missing'>[Missing: " + o[i] + "]</span> ";
+  resultHTML += "<span class='missing'>["+o[i]+"]</span> ";
+  missing++;
   full++;
   i++;
 }
 
 while(j < t.length){
-  output += "<span class='extra'>" + t[j] + "</span> ";
+  resultHTML += "<span class='extra'>"+t[j]+"</span> ";
+  extra++;
   full++;
   j++;
 }
 
+// RESULT
 let totalError = full + (half * 0.5);
 let errorPercent = ((totalError / o.length) * 100).toFixed(2);
-
 let status = errorPercent <= 8 ? "✅ QUALIFY" : "❌ DISQUALIFY";
 
-// summary
+// SUMMARY
 document.getElementById("summary").innerHTML =
-  "<b>Total Words:</b> " + o.length +
-  "<br><b>Full Mistake:</b> " + full +
-  "<br><b>Half Mistake:</b> " + half +
-  "<br><b>Total Error:</b> " + totalError +
-  "<br><b>Error %:</b> " + errorPercent +
-  "<br><br><b>Status:</b> " + status;
+  "Total Words: "+o.length+
+  "<br>Full Mistake: "+full+
+  "<br>Half Mistake: "+half+
+  "<br>Missing Words: "+missing+
+  "<br>Extra Words: "+extra+
+  "<br>Wrong Words: "+wrong+
+  "<br>Total Error: "+totalError+
+  "<br>Error %: "+errorPercent+
+  "<br><br>Status: "+status;
 
-// output
-document.getElementById("words").innerHTML = output;
+// COMPARISON
+document.getElementById("comparison").innerHTML = resultHTML;
 
 </script>
 
