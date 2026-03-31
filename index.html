@@ -1,161 +1,92 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Steno Practice</title>
+  <title>Steno Practice Portal</title>
+
   <style>
-    body { font-family: Arial; padding: 15px; background:#f2f2f2; }
-    h2 { text-align:center; }
-    textarea { width: 100%; height: 150px; margin-top:10px; font-size:16px; }
-    select, button { padding: 10px; margin-top: 10px; width: 100%; font-size:16px; }
-    #result { margin-top: 15px; background: white; padding: 10px; border-radius: 5px; }
-    .wrong { color: red; }
-    .correct { color: green; }
+    body {
+      font-family: Arial;
+      background: #f2f2f2;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      background: #333;
+      color: white;
+      padding: 15px;
+      margin: 0;
+    }
+
+    .container {
+      margin-top: 30px;
+      padding: 10px;
+    }
+
+    .card {
+      background: white;
+      margin: 15px auto;
+      padding: 25px;
+      width: 90%;
+      max-width: 400px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .card:hover {
+      transform: scale(1.03);
+      background: #e6f0ff;
+    }
+
+    .coming {
+      color: gray;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+
+    .active {
+      border-left: 5px solid green;
+    }
+
   </style>
 </head>
 
 <body>
 
-<h2>Steno Dictation Practice</h2>
+<h1>Steno Practice Portal</h1>
 
-<p id="timer">Time Left: 15:00</p>
+<div class="container">
 
-<select id="dictationSelect" onchange="loadDictation()">
-  <option value="0">Select Dictation</option>
-  <option value="1">Dictation 1 (SSC)</option>
-</select>
+  <!-- KC Magazine -->
+  <div class="card active" onclick="goToKC()">
+    <h3>KC Magazine</h3>
+    <p>Practice Dictation</p>
+  </div>
 
-<audio id="audio" controls style="width:100%; margin-top:10px;"></audio>
+  <!-- Progressive -->
+  <div class="card">
+    <h3>Progressive Magazine</h3>
+    <p class="coming">Coming Soon</p>
+  </div>
 
-<textarea id="text" placeholder="Type your transcription here..."></textarea>
+  <!-- Real Exam -->
+  <div class="card">
+    <h3>Real Exam Dictation</h3>
+    <p class="coming">Coming Soon</p>
+  </div>
 
-<button onclick="startTest()">Start</button>
-<button onclick="submitTest()">Submit</button>
-
-<div id="result"></div>
+</div>
 
 <script>
-let startTime;
-let timer;
-let totalTime = 900;
 
-// ✅ FULL DICTATION
-let dictations = {
-  1: {
-    text: "Mr. Vice Chairman Sir I thank you for giving me this opportunity to speak on the Banking Public Financial Institution and Negotiable Instruments Law Amendment Bill 2008. Sir if we go back to the history when the announcement was made by Smt. Indira Gandhi our former Prime Minister we had seen that there was opposition even from the Congressman against the progressive thinking and they said that the banks should not be nationalised. But Indiraji was committed to it. She made it a point to see that the banks are nationalised so that the gates are opened for the purpose of helping the poor and the downtrodden. Sir we have to accept the fact that the banks have become public institutions nowadays and even the poor people can go there and get loans. I would like to submit that in some banks the system of lending money and providing financial assistance to the small businessmen agriculturists and the persons who are small vendors has not been taken very seriously. In the last year Budget the 2008-09 Budget which was presented by the then Finance Minister the thrust was given to agriculture.",
-    audio: "dict1.mp3"
-  }
-};
-
-// Load dictation
-function loadDictation() {
-  let id = document.getElementById("dictationSelect").value;
-  if (id == 0) return;
-
-  document.getElementById("audio").src = dictations[id].audio;
-  document.getElementById("text").value = "";
-  document.getElementById("result").innerHTML = "";
-
-  clearInterval(timer);
-  totalTime = 900;
-  document.getElementById("timer").innerHTML = "Time Left: 15:00";
+function goToKC() {
+  // 👉 next page (typing page)
+  window.location.href = "test.html";
 }
 
-// Timer start
-function startTest() {
-  startTime = new Date();
-
-  timer = setInterval(function() {
-    totalTime--;
-
-    let minutes = Math.floor(totalTime / 60);
-    let seconds = totalTime % 60;
-
-    document.getElementById("timer").innerHTML =
-      "Time Left: " + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
-
-    if (totalTime <= 0) {
-      clearInterval(timer);
-      submitTest();
-    }
-  }, 1000);
-}
-
-// Submit test
-function submitTest() {
-  clearInterval(timer);
-
-  let id = document.getElementById("dictationSelect").value;
-  let originalText = dictations[id].text.trim();
-  let typedText = document.getElementById("text").value.trim();
-
-  let originalWords = originalText.split(/\s+/);
-  let typedWords = typedText.split(/\s+/);
-
-  let i = 0, j = 0;
-  let mistakes = 0;
-
-  let wrongWords = [];
-  let missingWords = [];
-  let extraWords = [];
-
-  let comparison = "";
-
-  while (i < originalWords.length && j < typedWords.length) {
-    if (originalWords[i] === typedWords[j]) {
-      comparison += "<span class='correct'>" + typedWords[j] + "</span> ";
-      i++; j++;
-    } else {
-      if (originalWords[i + 1] === typedWords[j]) {
-        missingWords.push(originalWords[i]);
-        mistakes++;
-        comparison += "<span class='wrong'>[Missing: " + originalWords[i] + "]</span> ";
-        i++;
-      } else if (originalWords[i] === typedWords[j + 1]) {
-        extraWords.push(typedWords[j]);
-        mistakes++;
-        comparison += "<span class='wrong'>" + typedWords[j] + "</span> ";
-        j++;
-      } else {
-        wrongWords.push(typedWords[j]);
-        mistakes++;
-        comparison += "<span class='wrong'>" + typedWords[j] + "</span> ";
-        i++; j++;
-      }
-    }
-  }
-
-  while (i < originalWords.length) {
-    missingWords.push(originalWords[i]);
-    comparison += "<span class='wrong'>[Missing: " + originalWords[i] + "]</span> ";
-    mistakes++;
-    i++;
-  }
-
-  while (j < typedWords.length) {
-    extraWords.push(typedWords[j]);
-    comparison += "<span class='wrong'>" + typedWords[j] + "</span> ";
-    mistakes++;
-    j++;
-  }
-
-  let originalTotal = originalWords.length;
-  let typedTotal = typedWords.length;
-  let errorPercent = ((mistakes / originalTotal) * 100).toFixed(2);
-  let status = (errorPercent <= 8) ? "✅ QUALIFY" : "❌ DISQUALIFY";
-
-  document.getElementById("result").innerHTML =
-    "<b>Original Total Words:</b> " + originalTotal +
-    "<br><b>Typed Words:</b> " + typedTotal +
-    "<br><b>Total Mistakes:</b> " + mistakes +
-    "<br><b>Error %:</b> " + errorPercent + "%" +
-    "<br><br><b>Status:</b> " + status +
-
-    "<br><br><b>Wrong Words:</b> " + (wrongWords.join(", ") || "None") +
-    "<br><b>Missing Words:</b> " + (missingWords.join(", ") || "None") +
-    "<br><b>Extra Words:</b> " + (extraWords.join(", ") || "None") +
-
-    "<br><br><b>Comparison:</b><br>" + comparison;
-}
 </script>
 
 </body>
