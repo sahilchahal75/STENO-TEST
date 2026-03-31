@@ -5,17 +5,38 @@
 
   <style>
     body { font-family: Arial; background:#f2f2f2; padding:10px; }
+
     .box { background:#fff; padding:10px; border-radius:8px; margin-bottom:10px; }
+
+    .btn {
+      padding:10px;
+      margin:5px;
+      border:none;
+      border-radius:5px;
+      cursor:pointer;
+    }
+
+    .print-btn { background:#2563eb; color:white; }
+    .back-btn { background:#10b981; color:white; }
+
+    /* 🔥 COLORS UPDATED */
     .correct { color:green; }
-    .wrong { color:red; }
+    .wrong { color:#8B0000; font-weight:bold; } /* DARK RED */
     .extra { color:blue; }
     .missing { color:black; font-weight:bold; }
+
   </style>
 </head>
 
 <body>
 
 <h2 style="text-align:center;">Detail Result</h2>
+
+<!-- 🔥 BUTTONS -->
+<div style="text-align:center;">
+  <button class="btn print-btn" onclick="printResult()">🖨️ Print / Save PDF</button>
+  <button class="btn back-btn" onclick="goBack()">⬅ Back</button>
+</div>
 
 <div class="box" id="summary"></div>
 <div class="box" id="comparison"></div>
@@ -30,12 +51,22 @@ Qualify = Error % ≤ 8%
 <div class="box">
 <b>Colour Meaning:</b><br>
 <span class="correct">Green</span> → Correct<br>
-<span class="wrong">Red</span> → Wrong / Spelling / Capital Error<br>
+<span class="wrong">Dark Red</span> → Wrong / Spelling / Capital Error<br>
 <span class="extra">Blue</span> → Extra Word<br>
 <span class="missing">Black</span> → Missing Word
 </div>
 
 <script>
+
+// PRINT FUNCTION
+function printResult(){
+  window.print();
+}
+
+// BACK
+function goBack(){
+  window.history.back();
+}
 
 // LOAD DATA
 let originalText = localStorage.getItem("original");
@@ -68,31 +99,26 @@ while(i < o.length && j < t.length){
   let ow = normalize(o[i]).toLowerCase();
   let tw = normalize(t[j]).toLowerCase();
 
-  // correct
   if(ow === tw){
     resultHTML += "<span class='correct'>"+o[i]+"</span> ";
     i++; j++;
     continue;
   }
 
-  // ignore
   if(ignoreMap[ow] === tw || ignoreMap[tw] === ow){
     resultHTML += "<span class='correct'>"+o[i]+"</span> ";
     i++; j++;
     continue;
   }
 
-  // 🔥 alignment fix
   let found = false;
 
   for(let k=1; k<=3; k++){
 
     if(o[i+k] && normalize(o[i+k]).toLowerCase() === tw){
-      // missing
       for(let m=0; m<k; m++){
         resultHTML += "<span class='missing'>["+o[i+m]+"]</span> ";
-        missing++;
-        full++;
+        missing++; full++;
       }
       i += k;
       found = true;
@@ -100,11 +126,9 @@ while(i < o.length && j < t.length){
     }
 
     if(t[j+k] && normalize(t[j+k]).toLowerCase() === ow){
-      // extra
       for(let m=0; m<k; m++){
         resultHTML += "<span class='extra'>"+t[j+m]+"</span> ";
-        extra++;
-        full++;
+        extra++; full++;
       }
       j += k;
       found = true;
@@ -114,7 +138,6 @@ while(i < o.length && j < t.length){
 
   if(found) continue;
 
-  // singular/plural
   if(ow+"s" === tw || ow === tw+"s"){
     resultHTML += "<span class='wrong'>"+t[j]+"</span> ";
     half++;
@@ -122,26 +145,19 @@ while(i < o.length && j < t.length){
     continue;
   }
 
-  // wrong
   resultHTML += "<span class='wrong'>"+t[j]+"</span> ";
-  wrong++;
-  full++;
+  wrong++; full++;
   i++; j++;
 }
 
-// remaining
 while(i < o.length){
   resultHTML += "<span class='missing'>["+o[i]+"]</span> ";
-  missing++;
-  full++;
-  i++;
+  missing++; full++; i++;
 }
 
 while(j < t.length){
   resultHTML += "<span class='extra'>"+t[j]+"</span> ";
-  extra++;
-  full++;
-  j++;
+  extra++; full++; j++;
 }
 
 // RESULT
