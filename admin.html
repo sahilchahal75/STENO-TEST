@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Panel</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      margin:0;
+      background: url('https://images.unsplash.com/photo-1518770660439-4636190af475') no-repeat center center/cover;
+    }
+
+    .overlay {
+      background: rgba(0,0,0,0.75);
+      min-height:100vh;
+      padding:20px;
+      color:white;
+    }
+
+    h2 { text-align:center; }
+
+    .topbar {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:15px;
+    }
+
+    .btn {
+      padding:8px 12px;
+      border:none;
+      border-radius:6px;
+      cursor:pointer;
+      margin-left:5px;
+    }
+
+    .login { background:#10b981; color:white; }
+    .logout { background:#ef4444; color:white; }
+
+    select {
+      width:100%;
+      padding:8px;
+      border-radius:6px;
+      margin:10px 0;
+    }
+
+    .box {
+      background:#fff;
+      color:black;
+      padding:10px;
+      margin:10px 0;
+      border-radius:8px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="overlay">
+
+<div class="topbar">
+  <h3>👨‍💼 Admin Panel</h3>
+  <div>
+    <span id="adminName">Not Logged In</span>
+    <button class="btn login" onclick="login()">Login</button>
+    <button class="btn logout" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<h2>📊 All Users Performance</h2>
+
+<select onchange="sortData(this.value)">
+  <option value="low">Sort by Lowest Error</option>
+  <option value="high">Sort by Highest Error</option>
+</select>
+
+<div id="data">Loading...</div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// 🔥 CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
+  authDomain: "steno-test-daecc.firebaseapp.com",
+  projectId: "steno-test-daecc"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+let allData = [];
+
+// 🔐 LOGIN
+window.login = function(){
+  signInWithPopup(auth, provider)
+    .then(()=> alert("Login Successful"))
+    .catch(err=>alert(err.message));
+};
+
+// 🔓 LOGOUT
+window.logout = function(){
+  signOut(auth);
+};
+
+// 🔒 ADMIN CHECK
+onAuthStateChanged(auth, async (user)=>{
+
+  let nameBox = document.getElementById("adminName");
+
+  if(!user){
+    nameBox.innerText = "Not Logged In";
+    document.getElementById("data").innerHTML = "❌ Please login as admin";
+    return;
+  }
+
+  // 🔥 ADMIN EMAIL LOCK
+  if(user.email !== "xsahil900@gmail.com"){
+    nameBox.innerText = user.displayName;
+    document.getElementById("data").innerHTML = "⛔ Access Denied (Not Admin)";
+    return;
+  }
+
+  // ✅ ADMIN ACCESS
+  nameBox.innerText = "👑 " + user.displayName;
+
+  loadData();
+});
+
+// 📥 LOAD DATA
+async function loadData(){
+
+  const snap = await getDocs(collection(db, "results"));
+
+  allData = [];
+
+  snap.forEach(doc=>{
+    let d = doc.data();
+
+    d.error = parseFloat(d.error);
+
+    allData.push(d);
+  });
+
+  showData(allData);
+}
+
+// 📊 SHOW DATA
+function showData(data){
+
+  let html = "";
+
+  data.forEach((d,i)=>{
+
+    html += `
+      <div class="box">
+        <b>#${i+1}</b><br>
+        👤 Name: ${d.name || "N/A"}<br>
+        📧 Email: ${d.email || "N/A"}<br>
+        🆔 ID: ${d.user}<br>
+        ❌ Error: ${d.error}%<br>
+        📊 Total Error: ${d.totalError}<br>
+        📅 Date: ${d.date}
+      </div>
+    `;
+  });
+
+  document.getElementById("data").innerHTML = html || "No Data Found";
+}
+
+// 🔄 SORT
+window.sortData = function(type){
+
+  if(type === "low"){
+    allData.sort((a,b)=>a.error - b.error);
+  } else {
+    allData.sort((a,b)=>b.error - a.error);
+  }
+
+  showData(allData);
+};
+
+</script>
+
+</body>
+</html>
