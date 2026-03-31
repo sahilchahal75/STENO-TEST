@@ -1,0 +1,98 @@
+function normalize(word) {
+  return word.replace(/[.,]/g, "");
+}
+
+// ignore mapping
+let ignoreMap = {
+  "%": "percent",
+  "percent": "%",
+  "rs": "rupees",
+  "rupees": "rs",
+  "vs": "versus",
+  "v/s": "versus",
+  "hon": "honourable",
+  "honourable": "hon"
+};
+
+function submitTest() {
+  clearInterval(timer);
+
+  let typedText = document.getElementById("text").value;
+
+  let o = originalText.trim().split(/\s+/);
+  let t = typedText.trim().split(/\s+/);
+
+  let i = 0, j = 0;
+  let full = 0, half = 0;
+
+  while (i < o.length && j < t.length) {
+
+    let ow = o[i];
+    let tw = t[j];
+
+    let owClean = normalize(ow).toLowerCase();
+    let twClean = normalize(tw).toLowerCase();
+
+    // ✔ ignore mapping
+    if (ignoreMap[owClean] === twClean || ignoreMap[twClean] === owClean) {
+      i++; j++;
+      continue;
+    }
+
+    // ✔ exact match
+    if (owClean === twClean) {
+      i++; j++;
+    }
+
+    // ✔ singular/plural → half mistake
+    else if (owClean + "s" === twClean || owClean === twClean + "s") {
+      half++;
+      i++; j++;
+    }
+
+    // ✔ capital mistake (case mismatch)
+    else if (normalize(ow) === normalize(tw)) {
+      full++;
+      i++; j++;
+    }
+
+    // ✔ missing word
+    else if (o[i+1] && normalize(o[i+1]).toLowerCase() === twClean) {
+      full++;
+      i++;
+    }
+
+    // ✔ extra word
+    else if (t[j+1] && owClean === normalize(t[j+1]).toLowerCase()) {
+      full++;
+      j++;
+    }
+
+    // ✔ wrong word
+    else {
+      full++;
+      i++; j++;
+    }
+  }
+
+  // remaining
+  full += (o.length - i);
+  full += (t.length - j);
+
+  let totalError = full + (half * 0.5);
+  let errorPercent = ((totalError / o.length) * 100).toFixed(2);
+
+  let status = errorPercent <= 8 ? "✅ QUALIFY" : "❌ DISQUALIFY";
+
+  document.getElementById("result").innerHTML =
+    "<b>Total Words:</b> " + o.length +
+    "<br><b>Full Mistakes:</b> " + full +
+    "<br><b>Half Mistakes:</b> " + half +
+    "<br><b>Total Error:</b> " + totalError +
+    "<br><b>Error %:</b> " + errorPercent +
+    "<br><br><b>Status:</b> " + status +
+    "<br><br><button onclick='viewDetail()'>View Detail Result</button>";
+
+  localStorage.setItem("typed", typedText);
+  localStorage.setItem("original", originalText);
+}
