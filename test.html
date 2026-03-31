@@ -3,6 +3,10 @@
 <head>
   <title>Steno Test</title>
 
+  <!-- 🔥 Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
   <style>
     body { font-family: Arial; text-align:center; background:#f2f2f2; padding:10px; }
     textarea { width:95%; height:150px; margin-top:10px; }
@@ -16,12 +20,15 @@
 
 <h2>Steno Dictation Practice</h2>
 
+<!-- 🔐 LOGIN -->
+<button onclick="login()">Login with Google</button>
+<button onclick="logout()">Logout</button>
+<p id="userInfo"></p>
+
 <p id="timer">Time Left: 15:00</p>
 
-<!-- 🔽 Dropdown -->
 <select id="dictSelect" onchange="loadDictation()"></select>
 
-<!-- 🔊 Audio -->
 <audio id="audioPlayer" controls></audio>
 
 <textarea id="text" placeholder="Type your transcription here..."></textarea>
@@ -33,31 +40,84 @@
 
 <script>
 
+// 🔥 FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
+  authDomain: "steno-test-daecc.firebaseapp.com",
+  projectId: "steno-test-daecc",
+  storageBucket: "steno-test-daecc.firebasestorage.app",
+  messagingSenderId: "636984354290",
+  appId: "1:636984354290:web:d1d9d7bcd3e88422b7776b",
+  measurementId: "G-VE5RZ6QTB8"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+// LOGIN
+function login(){
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).then((result)=>{
+    let user = result.user;
+    localStorage.setItem("isLoggedIn","true");
+    document.getElementById("userInfo").innerText = "Welcome: " + user.displayName;
+  });
+}
+
+// LOGOUT
+function logout(){
+  auth.signOut().then(()=>{
+    localStorage.removeItem("isLoggedIn");
+    document.getElementById("userInfo").innerText="";
+  });
+}
+
+// AUTO LOGIN
+auth.onAuthStateChanged((user)=>{
+  if(user){
+    document.getElementById("userInfo").innerText="Welcome: "+user.displayName;
+    localStorage.setItem("isLoggedIn","true");
+  }
+});
+
 // GLOBAL
 let dictations = [];
 let originalText = "";
 
-// 🔥 LOAD JSON
+// LOAD JSON
 fetch("dictations.json")
   .then(res => res.json())
   .then(data => {
+
     dictations = data;
 
     let select = document.getElementById("dictSelect");
+    let isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
 
     dictations.forEach((d, index) => {
+
+      // 🔒 lock system
+      if(!isLoggedIn && !d.free) return;
+
       let option = document.createElement("option");
       option.value = index;
       option.text = d.name;
       select.appendChild(option);
     });
 
-    loadDictation(); // load first
+    loadDictation();
   });
 
 // LOAD SELECTED
 function loadDictation(){
+
   let index = document.getElementById("dictSelect").value;
+  let isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+
+  if(!isLoggedIn && !dictations[index].free){
+    alert("🔒 Please login to unlock this dictation");
+    return;
+  }
 
   originalText = dictations[index].text;
 
@@ -70,6 +130,15 @@ let time = 900;
 let timer;
 
 function startTest(){
+
+  let isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+  let attempts = parseInt(localStorage.getItem("attempts") || 0);
+
+  if(!isLoggedIn && attempts >= 2){
+    alert("⚠️ Free limit over. Please login.");
+    return;
+  }
+
   timer = setInterval(()=>{
     time--;
     let min = Math.floor(time/60);
@@ -116,14 +185,10 @@ function submitTest(){
     let ow = normalize(o[i]).toLowerCase();
     let tw = normalize(t[j]).toLowerCase();
 
-    if(ow === tw){
-      i++; j++;
-      continue;
-    }
+    if(ow === tw){ i++; j++; continue; }
 
     if(ignoreMap[ow] === tw || ignoreMap[tw] === ow){
-      i++; j++;
-      continue;
+      i++; j++; continue;
     }
 
     let found = false;
@@ -131,30 +196,21 @@ function submitTest(){
     for(let k=1; k<=3; k++){
 
       if(o[i+k] && normalize(o[i+k]).toLowerCase() === tw){
-        full += k;
-        i += k;
-        found = true;
-        break;
+        full += k; i += k; found = true; break;
       }
 
       if(t[j+k] && normalize(t[j+k]).toLowerCase() === ow){
-        full += k;
-        j += k;
-        found = true;
-        break;
+        full += k; j += k; found = true; break;
       }
     }
 
     if(found) continue;
 
     if(ow+"s" === tw || ow === tw+"s"){
-      half++;
-      i++; j++;
-      continue;
+      half++; i++; j++; continue;
     }
 
-    full++;
-    i++; j++;
+    full++; i++; j++;
   }
 
   while(i < o.length){ full++; i++; }
@@ -175,10 +231,20 @@ function submitTest(){
     "<br><br>Status: "+status+
     "<br><br><button onclick='viewDetail()'>View Detail Result</button>";
 
+  // 🔥 guest attempt count
+  let isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+
+  if(!isLoggedIn){
+    let attempts = parseInt(localStorage.getItem("attempts") || 0);
+    attempts++;
+    localStorage.setItem("attempts", attempts);
+  }
+
   localStorage.setItem("original", originalText);
   localStorage.setItem("typed", typedText);
 }
 
+// DETAIL PAGE
 function viewDetail(){
   window.location.href = "result.html";
 }
