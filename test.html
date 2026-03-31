@@ -4,11 +4,7 @@
   <title>Steno Test</title>
 
   <style>
-    body {
-      font-family: Arial;
-      background:#f2f2f2;
-      padding:10px;
-    }
+    body { font-family: Arial; background:#f2f2f2; padding:10px; }
 
     .container {
       max-width:800px;
@@ -36,11 +32,7 @@
       border-radius:5px;
     }
 
-    button {
-      background:#2563eb;
-      color:white;
-      cursor:pointer;
-    }
+    button { background:#2563eb; color:white; }
 
     #result {
       margin-top:15px;
@@ -48,12 +40,31 @@
       padding:10px;
       border-radius:8px;
     }
+
+    .topbar {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+
+    .login-btn { background:#10b981; }
+    .logout-btn { background:#ef4444; }
+
   </style>
 </head>
 
 <body>
 
 <div class="container">
+
+<div class="topbar">
+  <h3>Steno Portal</h3>
+  <div>
+    <span id="userName">Guest User</span>
+    <button class="login-btn" onclick="login()">Login</button>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</div>
 
 <h2>Steno Dictation Practice</h2>
 
@@ -72,17 +83,77 @@
 
 </div>
 
-<script>
+<!-- 🔥 FIREBASE + LOGIC -->
+<script type="module">
 
-// GLOBAL
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
+  authDomain: "steno-test-daecc.firebaseapp.com",
+  projectId: "steno-test-daecc",
+  storageBucket: "steno-test-daecc.firebasestorage.app",
+  messagingSenderId: "636984354290",
+  appId: "1:636984354290:web:d1d9d7bcd3e88422b7776b"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+// LOGIN
+window.login = function(){
+  if(/Mobi|Android/i.test(navigator.userAgent)){
+    signInWithRedirect(auth, provider);
+  } else {
+    signInWithPopup(auth, provider)
+      .then((result)=>{
+        localStorage.setItem("user", result.user.uid);
+        alert("Login Successful ✅");
+      })
+      .catch(err=>alert(err.message));
+  }
+};
+
+// REDIRECT RESULT
+getRedirectResult(auth).then((result)=>{
+  if(result){
+    localStorage.setItem("user", result.user.uid);
+    alert("Login Successful ✅");
+  }
+});
+
+// LOGOUT
+window.logout = function(){
+  signOut(auth).then(()=>{
+    localStorage.removeItem("user");
+    alert("Logout Successful");
+  });
+};
+
+// USER NAME
+onAuthStateChanged(auth, (user)=>{
+  let box = document.getElementById("userName");
+  if(user){
+    box.innerText = "👤 " + user.displayName;
+  } else {
+    box.innerText = "Guest User";
+  }
+});
+
+// ================= NORMAL SCRIPT =================
+
 let dictations = [];
 let originalText = "";
 
 // LOAD JSON
 fetch("dictations.json")
-.then(res => res.json())
-.then(data => {
-
+.then(res=>res.json())
+.then(data=>{
   dictations = data;
 
   let select = document.getElementById("dictSelect");
@@ -98,17 +169,17 @@ fetch("dictations.json")
 });
 
 // LOAD
-function loadDictation(){
+window.loadDictation = function(){
   let i = document.getElementById("dictSelect").value;
   originalText = dictations[i].text;
   document.getElementById("audioPlayer").src = dictations[i].audio;
-}
+};
 
 // TIMER
 let time = 900;
 let timer;
 
-function startTest(){
+window.startTest = function(){
 
   time = 900;
 
@@ -127,14 +198,14 @@ function startTest(){
     }
 
   },1000);
-}
+};
 
 // NORMALIZE
 function normalize(word){
   return word.replace(/[.,]/g,"").toLowerCase();
 }
 
-// IGNORE WORDS
+// IGNORE
 let ignoreMap = {
   "%":"percent","percent":"%",
   "rs":"rupees","rupees":"rs",
@@ -143,9 +214,24 @@ let ignoreMap = {
 };
 
 // 🔥 FINAL LOGIC
-function submitTest(){
+window.submitTest = function(){
 
   clearInterval(timer);
+
+  // 🔥 GUEST LIMIT
+  let user = localStorage.getItem("user");
+
+  if(!user){
+    let count = localStorage.getItem("guestCount") || 0;
+    count++;
+
+    localStorage.setItem("guestCount", count);
+
+    if(count > 2){
+      alert("⚠️ Guest limit over! Please login.");
+      return;
+    }
+  }
 
   let typedText = document.getElementById("text").value;
 
@@ -160,24 +246,20 @@ function submitTest(){
     let ow = normalize(o[i]);
     let tw = normalize(t[j]);
 
-    // correct
     if(ow === tw){
       i++; j++;
       continue;
     }
 
-    // ignore
     if(ignoreMap[ow] === tw || ignoreMap[tw] === ow){
       i++; j++;
       continue;
     }
 
-    // 🔥 STRONG ALIGNMENT
     let matched = false;
 
     for(let k=1; k<=5; k++){
 
-      // missing
       if(o[i+k] && normalize(o[i+k]) === tw){
         full += k;
         i += k;
@@ -185,7 +267,6 @@ function submitTest(){
         break;
       }
 
-      // extra
       if(t[j+k] && normalize(t[j+k]) === ow){
         full += k;
         j += k;
@@ -196,23 +277,19 @@ function submitTest(){
 
     if(matched) continue;
 
-    // half mistake (singular/plural)
     if(ow+"s" === tw || ow === tw+"s"){
       half++;
       i++; j++;
       continue;
     }
 
-    // wrong word
     full++;
     i++; j++;
   }
 
-  // remaining
   while(i < o.length){ full++; i++; }
   while(j < t.length){ full++; j++; }
 
-  // 🔥 FINAL FORMULA
   let totalError = full + (half * 0.5);
   let errorPercent = ((totalError / o.length) * 100).toFixed(2);
 
@@ -227,14 +304,24 @@ function submitTest(){
     "<br><br><b>Status:</b> "+status+
     "<br><br><button onclick='viewDetail()'>View Detail Result</button>";
 
+  // SAVE RESULT
+  if(user){
+    addDoc(collection(db,"results"),{
+      user:user,
+      error:errorPercent,
+      totalError:totalError,
+      date:new Date().toLocaleString()
+    });
+  }
+
   localStorage.setItem("original", originalText);
   localStorage.setItem("typed", typedText);
-}
+};
 
 // DETAIL PAGE
-function viewDetail(){
+window.viewDetail = function(){
   window.location.href = "result.html";
-}
+};
 
 </script>
 
