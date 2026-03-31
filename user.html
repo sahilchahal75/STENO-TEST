@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>User Dashboard</title>
+  <title>My Progress</title>
 
   <style>
     body {
       font-family: Arial;
       background:#f2f2f2;
       padding:10px;
+    }
+
+    h2 {
+      text-align:center;
     }
 
     .box {
@@ -17,16 +21,24 @@
       margin-bottom:10px;
     }
 
-    h2 { text-align:center; }
-
     .btn {
       padding:10px;
-      background:#007bff;
-      color:white;
       border:none;
       border-radius:6px;
       margin-top:10px;
       width:100%;
+      cursor:pointer;
+    }
+
+    .login-btn {
+      background:#007bff;
+      color:white;
+      font-size:16px;
+    }
+
+    .home-btn {
+      background:#28a745;
+      color:white;
     }
   </style>
 </head>
@@ -35,18 +47,17 @@
 
 <h2>📊 My Progress</h2>
 
-<div class="box" id="userInfo"></div>
-<div class="box" id="stats"></div>
-<div class="box" id="history"></div>
+<div id="content"></div>
 
-<button class="btn" onclick="goBack()">⬅ Back to Home</button>
+<button class="btn home-btn" onclick="goHome()">🏠 Back to Home</button>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+// 🔥 CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
   authDomain: "steno-test-daecc.firebaseapp.com",
@@ -56,17 +67,36 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
 
+// 🔐 LOGIN FUNCTION
+window.loginUser = function(){
+  signInWithPopup(auth, provider)
+    .then(()=>{
+      location.reload();
+    })
+    .catch(err=>alert(err.message));
+};
+
+// 🧠 USER CHECK
 onAuthStateChanged(auth, async (user) => {
 
+  let content = document.getElementById("content");
+
+  // ❌ NOT LOGGED IN
   if(!user){
-    document.body.innerHTML = "❌ Please login first";
+    content.innerHTML = `
+      <div class="box" style="text-align:center;">
+        <h3>❌ Please login first</h3>
+        <button class="btn login-btn" onclick="loginUser()">
+          🔐 Login with Google
+        </button>
+      </div>
+    `;
     return;
   }
 
-  document.getElementById("userInfo").innerHTML =
-    "<b>Name:</b> " + user.displayName;
-
+  // ✅ LOGGED IN
   let q = query(collection(db, "results"), where("user", "==", user.uid));
   let querySnapshot = await getDocs(q);
 
@@ -86,24 +116,35 @@ onAuthStateChanged(auth, async (user) => {
 
     historyHTML += `
       <div style="border-bottom:1px solid #ddd;padding:5px;">
-        Error: ${err}% | Date: ${d.date}
+        📅 ${d.date} <br>
+        ❌ Error: ${err}%
       </div>
     `;
   });
 
   let avg = totalTest ? (totalError / totalTest).toFixed(2) : 0;
 
-  document.getElementById("stats").innerHTML =
-    "<b>Total Tests:</b> " + totalTest +
-    "<br><b>Average Error:</b> " + avg +
-    "<br><b>Best Score:</b> " + (best==999?0:best);
+  content.innerHTML = `
+    <div class="box">
+      <b>👤 Name:</b> ${user.displayName}
+    </div>
 
-  document.getElementById("history").innerHTML =
-    "<b>Test History:</b><br>" + historyHTML;
+    <div class="box">
+      <b>Total Tests:</b> ${totalTest}<br>
+      <b>Average Error:</b> ${avg}%<br>
+      <b>Best Score:</b> ${best==999?0:best}%
+    </div>
+
+    <div class="box">
+      <b>📜 Test History:</b><br>
+      ${historyHTML || "No tests yet"}
+    </div>
+  `;
 
 });
 
-window.goBack = function(){
+// BACK
+window.goHome = function(){
   window.location.href = "index.html";
 };
 
