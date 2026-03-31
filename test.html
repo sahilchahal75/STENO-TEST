@@ -1,36 +1,104 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Steno Test</title>
+  <title>Steno Practice Portal</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
-    body { font-family: Arial; text-align:center; background:#f2f2f2; padding:10px; }
-    textarea { width:95%; height:150px; margin-top:10px; }
-    button { padding:10px; width:95%; margin-top:10px; }
-    select { padding:8px; width:95%; margin-top:10px; }
-    #result { margin-top:15px; background:#fff; padding:10px; border-radius:8px; }
+    body {
+      font-family: Arial;
+      margin: 0;
+      background: #f4f6f9;
+    }
+
+    /* 🔥 NAVBAR */
+    .navbar {
+      background: #1f2937;
+      color: white;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .navbar h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .nav-right button {
+      margin-left: 8px;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .login-btn { background: #10b981; color: white; }
+    .logout-btn { background: #ef4444; color: white; }
+
+    /* 🔥 CARD */
+    .card {
+      background: white;
+      margin: 15px;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    textarea {
+      width: 100%;
+      height: 140px;
+      margin-top: 10px;
+      padding: 10px;
+    }
+
+    select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+    }
+
+    #result {
+      margin-top: 10px;
+      background: #ecfdf5;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .status-pass { color: green; font-weight: bold; }
+    .status-fail { color: red; font-weight: bold; }
+
   </style>
 
-  <!-- 🔥 Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+  <!-- ✅ Firebase OLD VERSION (IMPORTANT) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
 </head>
 
 <body>
 
-<h2>Steno Dictation Practice</h2>
+<!-- 🔥 NAVBAR -->
+<div class="navbar">
+  <h2>Steno Portal</h2>
 
-<!-- 🔐 LOGIN -->
-<h3 id="userName"></h3>
-<button onclick="login()">Login with Google</button>
-<button onclick="logout()">Logout</button>
+  <div class="nav-right">
+    <span id="userName"></span>
+    <button class="login-btn" onclick="login()">Login</button>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="card">
+
+<h3>Steno Dictation Practice</h3>
 
 <p id="timer">Time Left: 15:00</p>
 
-<!-- 🔽 Dropdown -->
 <select id="dictSelect" onchange="loadDictation()"></select>
 
-<!-- 🔊 Audio -->
 <audio id="audioPlayer" controls></audio>
 
 <textarea id="text" placeholder="Type your transcription here..."></textarea>
@@ -40,6 +108,8 @@
 
 <div id="result"></div>
 
+</div>
+
 <script>
 
 // 🔥 FIREBASE CONFIG
@@ -47,24 +117,17 @@ const firebaseConfig = {
   apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
   authDomain: "steno-test-daecc.firebaseapp.com",
   projectId: "steno-test-daecc",
-  storageBucket: "steno-test-daecc.firebasestorage.app",
-  messagingSenderId: "636984354290",
-  appId: "1:636984354290:web:d1d9d7bcd3e88422b7776b"
 };
 
-// INIT
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
 // LOGIN
 function login(){
   let provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider)
-    .then(result => {
-      document.getElementById("userName").innerText =
-        "Welcome: " + result.user.displayName;
-    })
-    .catch(err => alert(err.message));
+  auth.signInWithPopup(provider).then(res=>{
+    document.getElementById("userName").innerText = res.user.displayName;
+  });
 }
 
 // LOGOUT
@@ -73,32 +136,32 @@ function logout(){
   document.getElementById("userName").innerText = "";
 }
 
-// GLOBAL
+// 🔥 LOAD JSON
 let dictations = [];
 let originalText = "";
 
-// LOAD JSON
 fetch("dictations.json")
-  .then(res => res.json())
-  .then(data => {
-    dictations = data;
-    let select = document.getElementById("dictSelect");
+.then(res => res.json())
+.then(data => {
+  dictations = data;
 
-    dictations.forEach((d, index) => {
-      let option = document.createElement("option");
-      option.value = index;
-      option.text = d.name;
-      select.appendChild(option);
-    });
+  let select = document.getElementById("dictSelect");
 
-    loadDictation();
+  data.forEach((d,i)=>{
+    let opt = document.createElement("option");
+    opt.value = i;
+    opt.text = d.name;
+    select.appendChild(opt);
   });
 
-// LOAD SELECTED
+  loadDictation();
+});
+
+// LOAD
 function loadDictation(){
-  let index = document.getElementById("dictSelect").value;
-  originalText = dictations[index].text;
-  document.getElementById("audioPlayer").src = dictations[index].audio;
+  let i = document.getElementById("dictSelect").value;
+  originalText = dictations[i].text;
+  document.getElementById("audioPlayer").src = dictations[i].audio;
 }
 
 // TIMER
@@ -108,13 +171,13 @@ let timer;
 function startTest(){
   timer = setInterval(()=>{
     time--;
-    let min = Math.floor(time/60);
-    let sec = time % 60;
+    let m = Math.floor(time/60);
+    let s = time%60;
 
     document.getElementById("timer").innerText =
-      "Time Left: " + min + ":" + (sec<10?"0"+sec:sec);
+    "Time Left: "+m+":"+(s<10?"0"+s:s);
 
-    if(time <= 0){
+    if(time<=0){
       clearInterval(timer);
       submitTest();
     }
@@ -122,101 +185,57 @@ function startTest(){
 }
 
 // NORMALIZE
-function normalize(word){
-  return word.replace(/[.,]/g,"");
+function normalize(w){
+  return w.replace(/[.,]/g,"").toLowerCase();
 }
 
-// IGNORE WORDS
-let ignoreMap = {
+// IGNORE
+let ignore = {
   "%":"percent","percent":"%",
-  "rs":"rupees","rupees":"rs",
-  "vs":"versus","v/s":"versus",
-  "hon":"honourable","honourable":"hon"
+  "rs":"rupees","rupees":"rs"
 };
 
-// MAIN LOGIC
+// MAIN
 function submitTest(){
 
   clearInterval(timer);
 
-  let typedText = document.getElementById("text").value;
-
+  let t = document.getElementById("text").value.trim().split(/\s+/);
   let o = originalText.trim().split(/\s+/);
-  let t = typedText.trim().split(/\s+/);
 
-  let i=0, j=0;
-  let full=0, half=0;
+  let i=0,j=0,full=0,half=0;
 
-  while(i < o.length && j < t.length){
+  while(i<o.length && j<t.length){
 
-    let ow = normalize(o[i]).toLowerCase();
-    let tw = normalize(t[j]).toLowerCase();
+    let ow = normalize(o[i]);
+    let tw = normalize(t[j]);
 
-    if(ow === tw){
-      i++; j++;
-      continue;
+    if(ow===tw){ i++; j++; continue; }
+
+    if(ignore[ow]===tw){ i++; j++; continue; }
+
+    if(ow+"s"===tw || ow===tw+"s"){
+      half++; i++; j++; continue;
     }
 
-    if(ignoreMap[ow] === tw || ignoreMap[tw] === ow){
-      i++; j++;
-      continue;
-    }
-
-    let found = false;
-
-    for(let k=1; k<=3; k++){
-
-      if(o[i+k] && normalize(o[i+k]).toLowerCase() === tw){
-        full += k;
-        i += k;
-        found = true;
-        break;
-      }
-
-      if(t[j+k] && normalize(t[j+k]).toLowerCase() === ow){
-        full += k;
-        j += k;
-        found = true;
-        break;
-      }
-    }
-
-    if(found) continue;
-
-    if(ow+"s" === tw || ow === tw+"s"){
-      half++;
-      i++; j++;
-      continue;
-    }
-
-    full++;
-    i++; j++;
+    full++; i++; j++;
   }
 
-  while(i < o.length){ full++; i++; }
-  while(j < t.length){ full++; j++; }
+  full += (o.length-i) + (t.length-j);
 
-  let totalError = full + (half * 0.5);
-  let errorPercent = ((totalError / o.length) * 100).toFixed(2);
+  let total = full + (half*0.5);
+  let err = ((total/o.length)*100).toFixed(2);
 
-  let status = errorPercent <= 8 ? "✅ QUALIFY" : "❌ DISQUALIFY";
+  let status = err<=8 
+    ? "<span class='status-pass'>QUALIFY</span>" 
+    : "<span class='status-fail'>DISQUALIFY</span>";
 
   document.getElementById("result").innerHTML =
-    "Original Total Words: "+o.length+
-    "<br>Typed Words: "+t.length+
-    "<br>Full Mistakes: "+full+
-    "<br>Half Mistakes: "+half+
-    "<br>Total Error: "+totalError+
-    "<br>Error %: "+errorPercent+
-    "<br><br>Status: "+status+
-    "<br><br><button onclick='viewDetail()'>View Detail Result</button>";
-
-  localStorage.setItem("original", originalText);
-  localStorage.setItem("typed", typedText);
-}
-
-function viewDetail(){
-  window.location.href = "result.html";
+    "Total Words: "+o.length+
+    "<br>Full Mistake: "+full+
+    "<br>Half Mistake: "+half+
+    "<br>Error %: "+err+
+    "<br><br>Status: "+status;
 }
 
 </script>
