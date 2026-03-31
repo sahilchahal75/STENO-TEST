@@ -12,7 +12,6 @@
       background: #f4f6f9;
     }
 
-    /* 🔥 NAVBAR */
     .navbar {
       background: #1f2937;
       color: white;
@@ -22,13 +21,10 @@
       align-items: center;
     }
 
-    .navbar h2 {
-      margin: 0;
-      font-size: 18px;
-    }
+    .navbar h2 { margin: 0; }
 
     .nav-right button {
-      margin-left: 8px;
+      margin-left: 5px;
       padding: 6px 10px;
       border: none;
       border-radius: 5px;
@@ -38,7 +34,6 @@
     .login-btn { background: #10b981; color: white; }
     .logout-btn { background: #ef4444; color: white; }
 
-    /* 🔥 CARD */
     .card {
       background: white;
       margin: 15px;
@@ -72,7 +67,7 @@
 
   </style>
 
-  <!-- ✅ Firebase OLD VERSION (IMPORTANT) -->
+  <!-- ✅ Firebase FIXED VERSION -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
@@ -80,7 +75,6 @@
 
 <body>
 
-<!-- 🔥 NAVBAR -->
 <div class="navbar">
   <h2>Steno Portal</h2>
 
@@ -116,7 +110,7 @@
 const firebaseConfig = {
   apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
   authDomain: "steno-test-daecc.firebaseapp.com",
-  projectId: "steno-test-daecc",
+  projectId: "steno-test-daecc"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -136,7 +130,7 @@ function logout(){
   document.getElementById("userName").innerText = "";
 }
 
-// 🔥 LOAD JSON
+// LOAD JSON
 let dictations = [];
 let originalText = "";
 
@@ -157,7 +151,7 @@ fetch("dictations.json")
   loadDictation();
 });
 
-// LOAD
+// LOAD DICTATION
 function loadDictation(){
   let i = document.getElementById("dictSelect").value;
   originalText = dictations[i].text;
@@ -195,12 +189,13 @@ let ignore = {
   "rs":"rupees","rupees":"rs"
 };
 
-// MAIN
+// MAIN LOGIC
 function submitTest(){
 
   clearInterval(timer);
 
-  let t = document.getElementById("text").value.trim().split(/\s+/);
+  let typed = document.getElementById("text").value;
+  let t = typed.trim().split(/\s+/);
   let o = originalText.trim().split(/\s+/);
 
   let i=0,j=0,full=0,half=0;
@@ -235,7 +230,17 @@ function submitTest(){
     "<br>Full Mistake: "+full+
     "<br>Half Mistake: "+half+
     "<br>Error %: "+err+
-    "<br><br>Status: "+status;
+    "<br><br>Status: "+status+
+    "<br><br><button onclick='viewDetail()'>View Detail Result</button>";
+
+  // SAVE FOR DETAIL PAGE
+  localStorage.setItem("original", originalText);
+  localStorage.setItem("typed", typed);
+}
+
+// DETAIL PAGE
+function viewDetail(){
+  window.location.href = "result.html";
 }
 
 </script>
