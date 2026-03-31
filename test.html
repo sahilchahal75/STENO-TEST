@@ -17,7 +17,7 @@
 
 <p id="timer">Time Left: 15:00</p>
 
-<audio id="audio" controls>
+<audio controls>
   <source src="dict1.mp3" type="audio/mpeg">
 </audio>
 
@@ -30,22 +30,17 @@
 
 <script>
 
-// 🔹 ORIGINAL TEXT (tumhara full matter)
 let originalText = `Mr. Vice Chairman Sir I thank you for giving me this opportunity to speak on the Banking Public Financial Institutions and Negotiable Instruments Law Amendment Bill 2008. Sir if we go back to the history when the announcement was made by Smt. Indira Gandhi our former Prime Minister we had seen that there was opposition even from the Congressman against the progressive thinking and they said that the banks should not be nationalised. But Indiraji was committed to it. She made it a point to see that the banks are nationalised so that the gates are opened for the purpose of helping the poor and the downtrodden. Sir we have to accept the fact that the banks have become public institutions nowadays and even the poor people can go there and get loans. I would like to submit that in some banks the system of lending money and providing financial assistance to the small businessmen agriculturists and the persons who are small vendors has not been taken very seriously. In the last year Budget the 2008-09 Budget which was presented by the then Finance Minister the thrust was given to agriculture.`;
 
-// 🔹 TIMER
+// TIMER
 let time = 900;
 let timer;
 
 function startTest(){
-  document.getElementById("audio").play();
-
   timer = setInterval(()=>{
     time--;
-
     let min = Math.floor(time/60);
     let sec = time % 60;
-
     document.getElementById("timer").innerText =
       "Time Left: " + min + ":" + (sec<10?"0"+sec:sec);
 
@@ -53,28 +48,23 @@ function startTest(){
       clearInterval(timer);
       submitTest();
     }
-
   },1000);
 }
 
-// 🔹 NORMALIZE
+// NORMALIZE
 function normalize(word){
   return word.replace(/[.,]/g,"");
 }
 
-// 🔹 IGNORE WORDS
+// IGNORE WORDS
 let ignoreMap = {
-  "%":"percent",
-  "percent":"%",
-  "rs":"rupees",
-  "rupees":"rs",
-  "vs":"versus",
-  "v/s":"versus",
-  "hon":"honourable",
-  "honourable":"hon"
+  "%":"percent","percent":"%",
+  "rs":"rupees","rupees":"rs",
+  "vs":"versus","v/s":"versus",
+  "hon":"honourable","honourable":"hon"
 };
 
-// 🔹 SUBMIT
+// MAIN LOGIC
 function submitTest(){
 
   clearInterval(timer);
@@ -85,50 +75,42 @@ function submitTest(){
   let t = typedText.trim().split(/\s+/);
 
   let i=0, j=0;
-
   let full=0, half=0;
 
-  while(i<o.length && j<t.length){
+  while(i < o.length && j < t.length){
 
-    let ow = o[i];
-    let tw = t[j];
-
-    let owClean = normalize(ow).toLowerCase();
-    let twClean = normalize(tw).toLowerCase();
-
-    // ignore
-    if(ignoreMap[owClean]===twClean || ignoreMap[twClean]===owClean){
-      i++; j++; continue;
-    }
+    let ow = normalize(o[i]).toLowerCase();
+    let tw = normalize(t[j]).toLowerCase();
 
     // correct
-    if(owClean===twClean){
-      i++; j++; continue;
+    if(ow === tw){
+      i++; j++;
+      continue;
     }
 
-    // singular/plural
-    if(owClean+"s"===twClean || owClean===twClean+"s"){
-      half++;
-      i++; j++; continue;
+    // ignore words
+    if(ignoreMap[ow] === tw || ignoreMap[tw] === ow){
+      i++; j++;
+      continue;
     }
 
-    // capital mistake
-    if(normalize(ow)===normalize(tw)){
-      full++;
-      i++; j++; continue;
-    }
-
-    // missing
-    if(o[i+1] && normalize(o[i+1]).toLowerCase()===twClean){
-      full++;
+    // SHIFT FIX (important)
+    if(o[i+1] && normalize(o[i+1]).toLowerCase() === tw){
+      full++; // missing
       i++;
       continue;
     }
 
-    // extra
-    if(t[j+1] && owClean===normalize(t[j+1]).toLowerCase()){
-      full++;
+    if(t[j+1] && normalize(t[j+1]).toLowerCase() === ow){
+      full++; // extra
       j++;
+      continue;
+    }
+
+    // singular/plural
+    if(ow+"s" === tw || ow === tw+"s"){
+      half++;
+      i++; j++;
       continue;
     }
 
@@ -137,13 +119,12 @@ function submitTest(){
     i++; j++;
   }
 
-  // remaining
-  while(i<o.length){ full++; i++; }
-  while(j<t.length){ full++; j++; }
+  // remaining words
+  while(i < o.length){ full++; i++; }
+  while(j < t.length){ full++; j++; }
 
-  // result
-  let totalError = full + (half*0.5);
-  let errorPercent = ((totalError/o.length)*100).toFixed(2);
+  let totalError = full + (half * 0.5);
+  let errorPercent = ((totalError / o.length) * 100).toFixed(2);
 
   let status = errorPercent <= 8 ? "✅ QUALIFY" : "❌ DISQUALIFY";
 
@@ -156,12 +137,11 @@ function submitTest(){
     "<br><br>Status: "+status+
     "<br><br><button onclick='viewDetail()'>View Detail Result</button>";
 
-  // save data
+  // save for detail page
   localStorage.setItem("original", originalText);
   localStorage.setItem("typed", typedText);
 }
 
-// 🔹 DETAIL PAGE
 function viewDetail(){
   window.location.href = "result.html";
 }
