@@ -1,80 +1,74 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin Panel</title>
+<title>Admin Panel</title>
 
-  <style>
-    body {
-      font-family: Arial;
-      margin:0;
-      background: url('https://images.unsplash.com/photo-1518770660439-4636190af475') no-repeat center center/cover;
-    }
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:url('https://images.unsplash.com/photo-1518770660439-4636190af475') no-repeat center/cover;
+}
 
-    .overlay {
-      background: rgba(0,0,0,0.75);
-      min-height:100vh;
-      padding:20px;
-      color:white;
-    }
+.overlay{
+  background:rgba(0,0,0,0.85);
+  min-height:100vh;
+  color:white;
+  padding:20px;
+  text-align:center;
+}
 
-    h2 { text-align:center; }
+.btn{
+  padding:10px 20px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  margin:5px;
+}
 
-    .topbar {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:15px;
-    }
+.login{background:#22c55e;}
+.logout{background:#ef4444;}
 
-    .btn {
-      padding:8px 12px;
-      border:none;
-      border-radius:6px;
-      cursor:pointer;
-      margin-left:5px;
-    }
-
-    .login { background:#10b981; color:white; }
-    .logout { background:#ef4444; color:white; }
-
-    select {
-      width:100%;
-      padding:8px;
-      border-radius:6px;
-      margin:10px 0;
-    }
-
-    .box {
-      background:#fff;
-      color:black;
-      padding:10px;
-      margin:10px 0;
-      border-radius:8px;
-    }
-  </style>
+.box{
+  background:white;
+  color:black;
+  padding:10px;
+  margin:10px;
+  border-radius:8px;
+  text-align:left;
+}
+</style>
 </head>
 
 <body>
 
 <div class="overlay">
 
-<div class="topbar">
-  <h3>👨‍💼 Admin Panel</h3>
-  <div>
-    <span id="adminName">Not Logged In</span>
-    <button class="btn login" onclick="login()">Login</button>
-    <button class="btn logout" onclick="logout()">Logout</button>
-  </div>
+<h2>👨‍💼 Admin Panel</h2>
+
+<div id="loginBox">
+  <p>🔐 Admin Login Required</p>
+  <button class="btn login" onclick="login()">Login with Google</button>
+  <p id="msg"></p>
 </div>
 
-<h2>📊 All Users Performance</h2>
+<div id="adminPanel" style="display:none;">
 
-<select onchange="sortData(this.value)">
-  <option value="low">Sort by Lowest Error</option>
-  <option value="high">Sort by Highest Error</option>
-</select>
+  <div style="margin-bottom:10px;">
+    <span id="adminName"></span>
+    <button class="btn logout" onclick="logout()">Logout</button>
+  </div>
 
-<div id="data">Loading...</div>
+  <h3>📊 All Users Performance</h3>
+
+  <select onchange="sortData(this.value)">
+    <option value="low">Lowest Error</option>
+    <option value="high">Highest Error</option>
+  </select>
+
+  <div id="data"></div>
+
+</div>
 
 </div>
 
@@ -84,7 +78,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// 🔥 CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
   authDomain: "steno-test-daecc.firebaseapp.com",
@@ -96,96 +89,88 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-let allData = [];
+let allData=[];
 
-// 🔐 LOGIN
+// LOGIN
 window.login = function(){
-  signInWithPopup(auth, provider)
-    .then(()=> alert("Login Successful"))
-    .catch(err=>alert(err.message));
-};
+  signInWithPopup(auth, provider);
+}
 
-// 🔓 LOGOUT
+// LOGOUT
 window.logout = function(){
   signOut(auth);
-};
+}
 
-// 🔒 ADMIN CHECK
-onAuthStateChanged(auth, async (user)=>{
-
-  let nameBox = document.getElementById("adminName");
+// AUTH CHECK
+onAuthStateChanged(auth, async(user)=>{
 
   if(!user){
-    nameBox.innerText = "Not Logged In";
-    document.getElementById("data").innerHTML = "❌ Please login as admin";
+    document.getElementById("loginBox").style.display="block";
+    document.getElementById("adminPanel").style.display="none";
     return;
   }
 
-  // 🔥 ADMIN EMAIL LOCK
+  // ❌ NOT ADMIN
   if(user.email !== "xsahil900@gmail.com"){
-    nameBox.innerText = user.displayName;
-    document.getElementById("data").innerHTML = "⛔ Access Denied (Not Admin)";
+    document.getElementById("msg").innerText =
+    "❌ You are not an Admin, you use user login";
+    
+    document.getElementById("loginBox").style.display="block";
+    document.getElementById("adminPanel").style.display="none";
     return;
   }
 
-  // ✅ ADMIN ACCESS
-  nameBox.innerText = "👑 " + user.displayName;
+  // ✅ ADMIN LOGIN
+  document.getElementById("loginBox").style.display="none";
+  document.getElementById("adminPanel").style.display="block";
+
+  document.getElementById("adminName").innerText =
+    "👑 " + user.displayName;
 
   loadData();
 });
 
-// 📥 LOAD DATA
+// LOAD DATA
 async function loadData(){
+  const snap = await getDocs(collection(db,"results"));
 
-  const snap = await getDocs(collection(db, "results"));
-
-  allData = [];
-
+  allData=[];
   snap.forEach(doc=>{
-    let d = doc.data();
-
-    d.error = parseFloat(d.error);
-
+    let d=doc.data();
+    d.error=parseFloat(d.error);
     allData.push(d);
   });
 
   showData(allData);
 }
 
-// 📊 SHOW DATA
+// SHOW DATA
 function showData(data){
-
-  let html = "";
+  let html="";
 
   data.forEach((d,i)=>{
-
-    html += `
-      <div class="box">
-        <b>#${i+1}</b><br>
-        👤 Name: ${d.name || "N/A"}<br>
-        📧 Email: ${d.email || "N/A"}<br>
-        🆔 ID: ${d.user}<br>
-        ❌ Error: ${d.error}%<br>
-        📊 Total Error: ${d.totalError}<br>
-        📅 Date: ${d.date}
-      </div>
-    `;
+    html+=`
+    <div class="box">
+      <b>#${i+1}</b><br>
+      👤 ${d.name || "N/A"}<br>
+      📧 ${d.email || "N/A"}<br>
+      ❌ Error: ${d.error}%<br>
+      📅 ${d.date}
+    </div>`;
   });
 
-  document.getElementById("data").innerHTML = html || "No Data Found";
+  document.getElementById("data").innerHTML=html;
 }
 
-// 🔄 SORT
-window.sortData = function(type){
-
-  if(type === "low"){
-    allData.sort((a,b)=>a.error - b.error);
-  } else {
-    allData.sort((a,b)=>b.error - a.error);
+// SORT
+window.sortData=function(type){
+  if(type==="low"){
+    allData.sort((a,b)=>a.error-b.error);
+  }else{
+    allData.sort((a,b)=>b.error-a.error);
   }
-
   showData(allData);
-};
+}
 
 </script>
 
