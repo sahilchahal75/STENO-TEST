@@ -3,109 +3,82 @@
 <head>
 <title>Admin Panel</title>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
 body{
   margin:0;
   font-family:Arial;
-  background:#0f172a;
+  background:url('https://images.unsplash.com/photo-1518770660439-4636190af475') no-repeat center/cover;
+}
+
+.overlay{
+  background:rgba(0,0,0,0.85);
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
   color:white;
-}
-
-.header{
-  padding:15px;
-  background:#1e293b;
-  display:flex;
-  justify-content:space-between;
-}
-
-.btn{
-  padding:8px 12px;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-}
-
-.login{background:#22c55e;}
-.logout{background:#ef4444;}
-
-.container{
-  padding:10px;
-}
-
-.cards{
-  display:flex;
-  flex-wrap:wrap;
-}
-
-.card{
-  flex:1;
-  min-width:120px;
-  background:#1e293b;
-  margin:5px;
-  padding:10px;
-  border-radius:8px;
-  text-align:center;
 }
 
 .box{
   background:#1e293b;
-  margin:10px 0;
-  padding:10px;
-  border-radius:8px;
+  padding:25px;
+  border-radius:12px;
+  width:90%;
+  max-width:400px;
+  text-align:center;
 }
 
-.list{
+.btn{
+  padding:10px;
+  border:none;
+  border-radius:6px;
+  margin-top:10px;
+  width:100%;
+  cursor:pointer;
+}
+
+.login{background:#22c55e;color:white;}
+.logout{background:#ef4444;color:white;}
+
+.dataBox{
   background:white;
   color:black;
-  padding:8px;
-  margin:5px 0;
-  border-radius:6px;
+  padding:10px;
+  margin-top:10px;
+  border-radius:8px;
+  text-align:left;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">
-  <h3>👨‍💼 Admin Analytics</h3>
-  <div>
-    <span id="adminName"></span>
-    <button class="btn login" onclick="login()">Login</button>
-    <button class="btn logout" onclick="logout()">Logout</button>
-  </div>
+<div class="overlay">
+
+<!-- 🔐 LOGIN BOX -->
+<div id="loginBox" class="box">
+  <h2>👨‍💼 Admin Panel</h2>
+  <p>🔐 Admin Login Required</p>
+  <button class="btn login" onclick="login()">Login with Google</button>
 </div>
 
-<div class="container">
+<!-- 📊 ADMIN PANEL -->
+<div id="adminPanel" class="box" style="display:none;">
 
-<div id="loginMsg">🔐 Please login as Admin</div>
+  <h2>👑 Admin Panel</h2>
 
-<div id="dashboard" style="display:none;">
+  <p id="adminName"></p>
 
-<!-- 🔥 STATS -->
-<div class="cards">
-  <div class="card">👤 Users<br><b id="users">0</b></div>
-  <div class="card">📝 Tests<br><b id="tests">0</b></div>
-  <div class="card">📊 Avg Error<br><b id="avg">0%</b></div>
-</div>
+  <button class="btn logout" onclick="logout()">Logout</button>
 
-<!-- 📊 GRAPH -->
-<div class="box">
-  <canvas id="graph"></canvas>
-</div>
+  <h3>📊 All Users Performance</h3>
 
-<!-- 🏆 TOP USERS -->
-<div class="box">
-  <h3>🏆 Top 5 Performers</h3>
-  <div id="top"></div>
-</div>
+  <select onchange="sortData(this.value)">
+    <option value="low">Lowest Error</option>
+    <option value="high">Highest Error</option>
+  </select>
 
-<!-- 📂 CATEGORY -->
-<div class="box">
-  <h3>📂 Category Analysis</h3>
-  <div id="cat"></div>
-</div>
+  <div id="data"></div>
 
 </div>
 
@@ -128,32 +101,40 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-let chart;
+let allData=[];
 
 // LOGIN
-window.login = ()=> signInWithPopup(auth,provider);
-window.logout = ()=> signOut(auth);
+window.login = function(){
+  signInWithPopup(auth, provider);
+};
+
+// LOGOUT
+window.logout = function(){
+  signOut(auth);
+};
 
 // AUTH CHECK
 onAuthStateChanged(auth, async(user)=>{
 
   if(!user){
-    document.getElementById("dashboard").style.display="none";
-    document.getElementById("loginMsg").style.display="block";
+    document.getElementById("loginBox").style.display="block";
+    document.getElementById("adminPanel").style.display="none";
     return;
   }
 
+  // ❌ WRONG USER
   if(user.email !== "xsahil900@gmail.com"){
-    document.getElementById("loginMsg").innerText =
-    "❌ You are not an Admin";
+    alert("❌ You are not an Admin. Please use User login.");
+    signOut(auth);
     return;
   }
+
+  // ✅ ADMIN LOGIN
+  document.getElementById("loginBox").style.display="none";
+  document.getElementById("adminPanel").style.display="block";
 
   document.getElementById("adminName").innerText =
-  "👑 "+user.displayName;
-
-  document.getElementById("dashboard").style.display="block";
-  document.getElementById("loginMsg").style.display="none";
+    "👤 " + user.displayName;
 
   loadData();
 });
@@ -163,64 +144,45 @@ async function loadData(){
 
   const snap = await getDocs(collection(db,"results"));
 
-  let data=[];
-  let usersSet=new Set();
-  let totalError=0;
-
-  let category={KC:0,Progressive:0,Exam:0};
+  allData=[];
 
   snap.forEach(doc=>{
     let d=doc.data();
     d.error=parseFloat(d.error);
-
-    data.push(d);
-    usersSet.add(d.email);
-
-    totalError+=d.error;
-
-    if(d.category) category[d.category]++;
+    allData.push(d);
   });
 
-  // STATS
-  document.getElementById("users").innerText = usersSet.size;
-  document.getElementById("tests").innerText = data.length;
-  document.getElementById("avg").innerText =
-    (totalError/data.length).toFixed(2)+"%";
+  showData(allData);
+}
 
-  // GRAPH
-  let last=data.slice(-10);
-  let labels=last.map((d,i)=>"T"+(i+1));
-  let values=last.map(d=>d.error);
+// SHOW DATA
+function showData(data){
 
-  if(chart) chart.destroy();
+  let html="";
 
-  chart=new Chart(document.getElementById("graph"),{
-    type:'line',
-    data:{
-      labels:labels,
-      datasets:[{label:"Error %",data:values}]
-    }
-  });
-
-  // TOP USERS
-  data.sort((a,b)=>a.error-b.error);
-
-  let topHTML="";
-  data.slice(0,5).forEach((d,i)=>{
-    topHTML+=`
-    <div class="list">
-      #${i+1} 👤 ${d.name || "User"} - ${d.error}%
+  data.forEach((d,i)=>{
+    html+=`
+    <div class="dataBox">
+      <b>#${i+1}</b><br>
+      👤 ${d.name || "N/A"}<br>
+      📧 ${d.email || "N/A"}<br>
+      ❌ Error: ${d.error}%<br>
+      📅 ${d.date}
     </div>`;
   });
 
-  document.getElementById("top").innerHTML=topHTML;
-
-  // CATEGORY
-  document.getElementById("cat").innerHTML=
-  `KC: ${category.KC}<br>
-   Progressive: ${category.Progressive}<br>
-   Exam: ${category.Exam}`;
+  document.getElementById("data").innerHTML=html;
 }
+
+// SORT
+window.sortData=function(type){
+  if(type==="low"){
+    allData.sort((a,b)=>a.error-b.error);
+  }else{
+    allData.sort((a,b)=>b.error-a.error);
+  }
+  showData(allData);
+};
 
 </script>
 
