@@ -52,11 +52,13 @@ body{
 
 <div class="overlay">
 
+<!-- LOGIN -->
 <div id="loginBox" class="card">
   <h2>👨‍💼 Admin Login</h2>
   <button class="btn login" onclick="login()">Login</button>
 </div>
 
+<!-- PANEL -->
 <div id="adminPanel" style="display:none;">
 
 <div class="card">
@@ -65,13 +67,39 @@ body{
   <button class="btn logout" onclick="logout()">Logout</button>
 </div>
 
-<!-- 📤 Upload -->
+<!-- UPLOAD -->
 <div class="card">
-  <h3>📤 Upload</h3>
-  <button onclick="goUpload()">Go to Upload Page</button>
+  <h3>📤 Upload Dictation</h3>
+  <button onclick="goUpload()">Go to Upload</button>
 </div>
 
-<!-- 📂 Dictations -->
+<!-- ANALYTICS -->
+<div class="card">
+  <h3>📊 Analytics</h3>
+  <p id="totalUsers"></p>
+  <p id="totalTests"></p>
+  <p id="avgError"></p>
+</div>
+
+<!-- SEARCH -->
+<div class="card">
+  <h3>🔍 Search User</h3>
+  <input type="text" placeholder="Search name..." onkeyup="searchUser(this.value)" style="width:100%;padding:8px;">
+</div>
+
+<!-- USERS -->
+<div class="card">
+  <h3>👥 Users Performance</h3>
+
+  <select onchange="sortData(this.value)">
+    <option value="low">Lowest Error</option>
+    <option value="high">Highest Error</option>
+  </select>
+
+  <div id="data"></div>
+</div>
+
+<!-- DICTATIONS -->
 <div class="card">
   <h3>📂 Manage Dictations</h3>
   <div id="dictList"></div>
@@ -85,6 +113,7 @@ body{
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
@@ -94,16 +123,19 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
+let allData=[];
+
 // LOGIN
-window.login = () => signInWithPopup(auth, provider);
+window.login = ()=> signInWithPopup(auth, provider);
 
 // LOGOUT
-window.logout = () => signOut(auth);
+window.logout = ()=> signOut(auth);
 
 // AUTH CHECK
-onAuthStateChanged(auth, (user)=>{
+onAuthStateChanged(auth, async(user)=>{
 
   if(!user){
     loginBox.style.display="block";
@@ -122,10 +154,71 @@ onAuthStateChanged(auth, (user)=>{
 
   adminName.innerText = "👤 " + user.displayName;
 
+  loadUsers();
   loadDictations();
 });
 
-// LOAD DICTATIONS
+// USERS DATA
+async function loadUsers(){
+
+  const snap = await getDocs(collection(db,"results"));
+
+  allData=[];
+
+  let totalError=0;
+
+  snap.forEach(doc=>{
+    let d=doc.data();
+    d.error=parseFloat(d.error);
+    allData.push(d);
+    totalError+=d.error;
+  });
+
+  document.getElementById("totalUsers").innerText="Users: "+allData.length;
+  document.getElementById("totalTests").innerText="Tests: "+allData.length;
+  document.getElementById("avgError").innerText="Avg Error: "+(totalError/allData.length).toFixed(2)+"%";
+
+  showData(allData);
+}
+
+// SHOW USERS
+function showData(data){
+
+  let html="";
+
+  data.forEach((d,i)=>{
+    html+=`
+    <div class="dataBox">
+      <b>#${i+1}</b><br>
+      👤 ${d.name || "N/A"}<br>
+      📧 ${d.email || "N/A"}<br>
+      ❌ Error: ${d.error}%<br>
+      📅 ${d.date}
+    </div>`;
+  });
+
+  document.getElementById("data").innerHTML=html;
+}
+
+// SORT
+window.sortData=function(type){
+  if(type==="low"){
+    allData.sort((a,b)=>a.error-b.error);
+  }else{
+    allData.sort((a,b)=>b.error-a.error);
+  }
+  showData(allData);
+};
+
+// SEARCH
+window.searchUser=function(val){
+  let filtered = allData.filter(d =>
+    (d.name||"").toLowerCase().includes(val.toLowerCase())
+  );
+  showData(filtered);
+};
+
+// DICTATIONS
 function loadDictations(){
 
   let data = JSON.parse(localStorage.getItem("dictations") || "[]");
@@ -137,7 +230,6 @@ function loadDictations(){
     <div class="dataBox">
       <b>${d.name}</b><br>
       📂 ${d.category}<br>
-      🔊 <a href="${d.audio}" target="_blank">Audio</a><br>
 
       <button class="btn edit" onclick="editDict(${i})">Edit</button>
       <button class="btn delete" onclick="deleteDict(${i})">Delete</button>
@@ -149,11 +241,9 @@ function loadDictations(){
 }
 
 // DELETE
-window.deleteDict = function(i){
-
+window.deleteDict=function(i){
   let data = JSON.parse(localStorage.getItem("dictations") || "[]");
-
-  if(confirm("Delete this dictation?")){
+  if(confirm("Delete?")){
     data.splice(i,1);
     localStorage.setItem("dictations", JSON.stringify(data));
     loadDictations();
@@ -161,23 +251,21 @@ window.deleteDict = function(i){
 };
 
 // EDIT
-window.editDict = function(i){
-
+window.editDict=function(i){
   let data = JSON.parse(localStorage.getItem("dictations") || "[]");
 
-  let newName = prompt("Edit Name:", data[i].name);
-  let newAudio = prompt("Edit Audio URL:", data[i].audio);
+  let name = prompt("Edit Name", data[i].name);
+  let audio = prompt("Edit Audio URL", data[i].audio);
 
-  if(newName) data[i].name = newName;
-  if(newAudio) data[i].audio = newAudio;
+  if(name) data[i].name=name;
+  if(audio) data[i].audio=audio;
 
   localStorage.setItem("dictations", JSON.stringify(data));
-
   loadDictations();
 };
 
 // GO UPLOAD
-window.goUpload = function(){
+window.goUpload=function(){
   window.location.href="upload.html";
 };
 
