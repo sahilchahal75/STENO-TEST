@@ -36,19 +36,10 @@ input, textarea, select{
   border-radius:5px;
   cursor:pointer;
 }
-.login{background:#22c55e;}
-.logout{background:#ef4444;}
 .upload{background:#10b981;color:white;}
 .delete{background:#dc2626;color:white;}
 .edit{background:#2563eb;color:white;}
-
-.dataBox{
-  background:white;
-  color:black;
-  padding:10px;
-  margin-top:10px;
-  border-radius:8px;
-}
+.goto{background:#f59e0b;color:white;}
 </style>
 </head>
 
@@ -56,22 +47,13 @@ input, textarea, select{
 
 <div class="overlay">
 
-<div id="loginBox" class="card">
-  <h2>Admin Login</h2>
-  <button class="btn login" onclick="login()">Login</button>
+<div class="card">
+<h2>👑 Admin Panel</h2>
+<button class="btn goto" onclick="goAnalytics()">📊 Go to Analytics</button>
 </div>
 
-<div id="adminPanel" style="display:none;">
-
 <div class="card">
-  <h2>Admin Dashboard</h2>
-  <p id="adminName"></p>
-  <button class="btn logout" onclick="logout()">Logout</button>
-</div>
-
-<!-- UPLOAD -->
-<div class="card">
-<h3>Upload Dictation</h3>
+<h3>📤 Upload + Manage Dictation</h3>
 
 <input id="name" placeholder="Name">
 <select id="category">
@@ -85,68 +67,21 @@ input, textarea, select{
 <button class="btn upload" onclick="uploadDict()">Upload</button>
 
 <hr>
-<h4>All Dictations</h4>
+
 <div id="dictList"></div>
 
 </div>
 
-<!-- USERS -->
-<div class="card">
-<h3>User Data</h3>
-<div id="users"></div>
 </div>
 
-</div>
+<script>
 
-</div>
-
-<script type="module">
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
-  authDomain: "steno-test-daecc.firebaseapp.com",
-  projectId: "steno-test-daecc"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
-
-// LOGIN
-window.login = ()=> signInWithPopup(auth, provider);
-window.logout = ()=> signOut(auth);
-
-// AUTH
-onAuthStateChanged(auth,(user)=>{
-
-  if(!user){
-    loginBox.style.display="block";
-    adminPanel.style.display="none";
-    return;
-  }
-
-  if(user.email!=="xsahil900@gmail.com"){
-    alert("Not Admin");
-    signOut(auth);
-    return;
-  }
-
-  loginBox.style.display="none";
-  adminPanel.style.display="block";
-
-  adminName.innerText=user.displayName;
-
-  loadDict();
-  loadUsers();
-});
+function goAnalytics(){
+  window.location.href="analytics.html";
+}
 
 // UPLOAD
-window.uploadDict=function(){
+function uploadDict(){
 
 let data=JSON.parse(localStorage.getItem("dictations")||"[]");
 
@@ -161,9 +96,9 @@ localStorage.setItem("dictations",JSON.stringify(data));
 
 alert("Uploaded");
 loadDict();
-};
+}
 
-// LOAD DICT
+// LOAD
 function loadDict(){
 
 let data=JSON.parse(localStorage.getItem("dictations")||"[]");
@@ -172,12 +107,12 @@ let html="";
 
 data.forEach((d,i)=>{
 html+=`
-<div class="dataBox">
+<div style="background:white;color:black;padding:10px;margin-top:10px;border-radius:8px;">
 <b>${d.name}</b><br>
 ${d.category}<br>
 
-<button class="btn edit" onclick="edit(${i})">Edit</button>
-<button class="btn delete" onclick="del(${i})">Delete</button>
+<button onclick="edit(${i})">Edit</button>
+<button onclick="del(${i})">Delete</button>
 </div>`;
 });
 
@@ -185,15 +120,15 @@ dictList.innerHTML=html;
 }
 
 // DELETE
-window.del=function(i){
+function del(i){
 let data=JSON.parse(localStorage.getItem("dictations"));
 data.splice(i,1);
 localStorage.setItem("dictations",JSON.stringify(data));
 loadDict();
-};
+}
 
 // EDIT
-window.edit=function(i){
+function edit(i){
 
 let data=JSON.parse(localStorage.getItem("dictations"));
 
@@ -205,28 +140,9 @@ if(a) data[i].audio=a;
 
 localStorage.setItem("dictations",JSON.stringify(data));
 loadDict();
-};
-
-// USERS
-async function loadUsers(){
-
-const snap=await getDocs(collection(db,"results"));
-
-let html="";
-
-snap.forEach(doc=>{
-let d=doc.data();
-
-html+=`
-<div class="dataBox">
-${d.name||"No Name"}<br>
-${d.email||"No Email"}<br>
-Error: ${d.error}%
-</div>`;
-});
-
-users.innerHTML=html;
 }
+
+loadDict();
 
 </script>
 
