@@ -10,13 +10,11 @@ body{
   background:url('https://images.unsplash.com/photo-1518770660439-4636190af475') no-repeat center/cover;
   color:white;
 }
-
 .overlay{
   background:rgba(0,0,0,0.9);
   min-height:100vh;
   padding:20px;
 }
-
 .card{
   background:#1e293b;
   padding:20px;
@@ -24,15 +22,13 @@ body{
   border-radius:10px;
   max-width:500px;
 }
-
 input, textarea, select{
   width:100%;
   padding:8px;
   margin-top:5px;
-  border-radius:5px;
   border:none;
+  border-radius:5px;
 }
-
 .btn{
   padding:8px;
   margin-top:5px;
@@ -40,12 +36,11 @@ input, textarea, select{
   border-radius:5px;
   cursor:pointer;
 }
-
 .login{background:#22c55e;}
 .logout{background:#ef4444;}
+.upload{background:#10b981;color:white;}
 .delete{background:#dc2626;color:white;}
 .edit{background:#2563eb;color:white;}
-.upload{background:#10b981;color:white;}
 
 .dataBox{
   background:white;
@@ -61,56 +56,44 @@ input, textarea, select{
 
 <div class="overlay">
 
-<!-- LOGIN -->
 <div id="loginBox" class="card">
-  <h2>👨‍💼 Admin Login</h2>
+  <h2>Admin Login</h2>
   <button class="btn login" onclick="login()">Login</button>
 </div>
 
-<!-- PANEL -->
 <div id="adminPanel" style="display:none;">
 
 <div class="card">
-  <h2>👑 Admin Dashboard</h2>
+  <h2>Admin Dashboard</h2>
   <p id="adminName"></p>
   <button class="btn logout" onclick="logout()">Logout</button>
 </div>
 
-<!-- 🔥 UPLOAD + MANAGE -->
+<!-- UPLOAD -->
 <div class="card">
-  <h3>📤 Upload / Manage Dictation</h3>
+<h3>Upload Dictation</h3>
 
-  <input type="text" id="name" placeholder="Dictation Name">
-  
-  <select id="category">
-    <option>KC Magazine</option>
-    <option>Progressive Magazine</option>
-    <option>Real Exam</option>
-  </select>
+<input id="name" placeholder="Name">
+<select id="category">
+<option>KC</option>
+<option>Progressive</option>
+<option>Exam</option>
+</select>
+<input id="audio" placeholder="Audio Link">
+<textarea id="text" placeholder="Text"></textarea>
 
-  <input type="text" id="audio" placeholder="Audio Link">
-  <textarea id="text" placeholder="Dictation Text"></textarea>
+<button class="btn upload" onclick="uploadDict()">Upload</button>
 
-  <button class="btn upload" onclick="uploadDict()">Upload</button>
+<hr>
+<h4>All Dictations</h4>
+<div id="dictList"></div>
 
-  <hr>
-
-  <h4>📂 Existing Dictations</h4>
-  <div id="dictList"></div>
 </div>
 
-<!-- 📊 ANALYTICS -->
+<!-- USERS -->
 <div class="card">
-  <h3>📊 Analytics</h3>
-  <p id="totalUsers">Users: 0</p>
-  <p id="totalTests">Tests: 0</p>
-  <p id="avgError">Avg Error: 0%</p>
-</div>
-
-<!-- 👥 USERS -->
-<div class="card">
-  <h3>👥 Users Performance</h3>
-  <div id="userData"></div>
+<h3>User Data</h3>
+<div id="users"></div>
 </div>
 
 </div>
@@ -136,12 +119,10 @@ const provider = new GoogleAuthProvider();
 
 // LOGIN
 window.login = ()=> signInWithPopup(auth, provider);
-
-// LOGOUT
 window.logout = ()=> signOut(auth);
 
-// AUTH CHECK
-onAuthStateChanged(auth, (user)=>{
+// AUTH
+onAuthStateChanged(auth,(user)=>{
 
   if(!user){
     loginBox.style.display="block";
@@ -149,8 +130,8 @@ onAuthStateChanged(auth, (user)=>{
     return;
   }
 
-  if(user.email !== "xsahil900@gmail.com"){
-    alert("❌ You are not Admin");
+  if(user.email!=="xsahil900@gmail.com"){
+    alert("Not Admin");
     signOut(auth);
     return;
   }
@@ -158,117 +139,93 @@ onAuthStateChanged(auth, (user)=>{
   loginBox.style.display="none";
   adminPanel.style.display="block";
 
-  adminName.innerText = "👤 " + user.displayName;
+  adminName.innerText=user.displayName;
 
-  loadDictations();
+  loadDict();
   loadUsers();
 });
 
-// 🔥 UPLOAD
+// UPLOAD
 window.uploadDict=function(){
 
-  let name = document.getElementById("name").value;
-  let category = document.getElementById("category").value;
-  let audio = document.getElementById("audio").value;
-  let text = document.getElementById("text").value;
+let data=JSON.parse(localStorage.getItem("dictations")||"[]");
 
-  if(!name || !audio || !text){
-    alert("Fill all fields");
-    return;
-  }
+data.push({
+name:name.value,
+category:category.value,
+audio:audio.value,
+text:text.value
+});
 
-  let data = JSON.parse(localStorage.getItem("dictations") || "[]");
+localStorage.setItem("dictations",JSON.stringify(data));
 
-  data.push({name, category, audio, text});
-
-  localStorage.setItem("dictations", JSON.stringify(data));
-
-  alert("✅ Uploaded");
-
-  loadDictations();
+alert("Uploaded");
+loadDict();
 };
 
-// LOAD DICTATIONS
-function loadDictations(){
+// LOAD DICT
+function loadDict(){
 
-  let data = JSON.parse(localStorage.getItem("dictations") || "[]");
+let data=JSON.parse(localStorage.getItem("dictations")||"[]");
 
-  let html="";
+let html="";
 
-  data.forEach((d,i)=>{
-    html+=`
-    <div class="dataBox">
-      <b>${d.name}</b><br>
-      📂 ${d.category}<br>
+data.forEach((d,i)=>{
+html+=`
+<div class="dataBox">
+<b>${d.name}</b><br>
+${d.category}<br>
 
-      <button class="btn edit" onclick="editDict(${i})">Edit</button>
-      <button class="btn delete" onclick="deleteDict(${i})">Delete</button>
-    </div>
-    `;
-  });
+<button class="btn edit" onclick="edit(${i})">Edit</button>
+<button class="btn delete" onclick="del(${i})">Delete</button>
+</div>`;
+});
 
-  document.getElementById("dictList").innerHTML = html;
+dictList.innerHTML=html;
 }
 
 // DELETE
-window.deleteDict=function(i){
-
-  let data = JSON.parse(localStorage.getItem("dictations") || "[]");
-
-  if(confirm("Delete?")){
-    data.splice(i,1);
-    localStorage.setItem("dictations", JSON.stringify(data));
-    loadDictations();
-  }
+window.del=function(i){
+let data=JSON.parse(localStorage.getItem("dictations"));
+data.splice(i,1);
+localStorage.setItem("dictations",JSON.stringify(data));
+loadDict();
 };
 
 // EDIT
-window.editDict=function(i){
+window.edit=function(i){
 
-  let data = JSON.parse(localStorage.getItem("dictations") || "[]");
+let data=JSON.parse(localStorage.getItem("dictations"));
 
-  let name = prompt("Edit Name", data[i].name);
-  let audio = prompt("Edit Audio", data[i].audio);
+let n=prompt("Name",data[i].name);
+let a=prompt("Audio",data[i].audio);
 
-  if(name) data[i].name=name;
-  if(audio) data[i].audio=audio;
+if(n) data[i].name=n;
+if(a) data[i].audio=a;
 
-  localStorage.setItem("dictations", JSON.stringify(data));
-
-  loadDictations();
+localStorage.setItem("dictations",JSON.stringify(data));
+loadDict();
 };
 
-// 🔥 USERS DATA + ANALYTICS
+// USERS
 async function loadUsers(){
 
-  const snap = await getDocs(collection(db,"results"));
+const snap=await getDocs(collection(db,"results"));
 
-  let html="";
-  let totalError=0;
-  let count=0;
+let html="";
 
-  snap.forEach(doc=>{
-    let d = doc.data();
+snap.forEach(doc=>{
+let d=doc.data();
 
-    html += `
-    <div class="dataBox">
-      👤 ${d.name || "N/A"}<br>
-      📧 ${d.email || "N/A"}<br>
-      ❌ Error: ${d.error}%<br>
-      📅 ${d.date}
-    </div>`;
+html+=`
+<div class="dataBox">
+${d.name||"No Name"}<br>
+${d.email||"No Email"}<br>
+Error: ${d.error}%
+</div>`;
+});
 
-    totalError += parseFloat(d.error || 0);
-    count++;
-  });
-
-  document.getElementById("userData").innerHTML = html;
-
-  document.getElementById("totalUsers").innerText = "Users: " + count;
-  document.getElementById("totalTests").innerText = "Tests: " + count;
-
-  let avg = count ? (totalError/count).toFixed(2) : 0;
-  document.getElementById("avgError").innerText = "Avg Error: " + avg + "%";
+users.innerHTML=html;
 }
 
 </script>
