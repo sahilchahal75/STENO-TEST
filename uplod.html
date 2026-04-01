@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Upload Dictation</title>
+
+<style>
+body{
+  font-family:Arial;
+  background:#0f172a;
+  color:white;
+  text-align:center;
+  padding:20px;
+}
+
+.box{
+  background:#1e293b;
+  padding:20px;
+  border-radius:10px;
+  max-width:500px;
+  margin:auto;
+}
+
+input, textarea, select{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border:none;
+  border-radius:6px;
+}
+
+button{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border:none;
+  border-radius:6px;
+  background:#3b82f6;
+  color:white;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+<h2>📤 Upload Dictation</h2>
+
+<input type="text" id="dName" placeholder="Dictation Name">
+
+<select id="dType">
+  <option value="KC">KC Magazine</option>
+  <option value="Progressive">Progressive Magazine</option>
+  <option value="Exam">Real Exam Dictation</option>
+</select>
+
+<input type="text" id="dAudio" placeholder="Paste Audio Link">
+
+<textarea id="dText" placeholder="Paste full dictation text"></textarea>
+
+<button onclick="upload()">Upload</button>
+
+<button onclick="goBack()">⬅ Back</button>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
+  authDomain: "steno-test-daecc.firebaseapp.com",
+  projectId: "steno-test-daecc"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+window.upload = async function(){
+
+  let name = dName.value;
+  let type = dType.value;
+  let text = dText.value;
+  let audio = dAudio.value;
+
+  if(!name || !text || !audio){
+    alert("Fill all fields");
+    return;
+  }
+
+  await addDoc(collection(db,"dictations"),{
+    name,
+    type,
+    text,
+    audio,
+    date:new Date().toLocaleString()
+  });
+
+  alert("✅ Uploaded Successfully");
+
+  dName.value="";
+  dText.value="";
+  dAudio.value="";
+};
+
+window.goBack = function(){
+  window.location.href="admin.html";
+};
+
+</script>
+
+</body>
+</html>
