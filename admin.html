@@ -12,17 +12,14 @@ body{
   text-align:center;
 }
 
-.container{
-  padding:20px;
-}
+.container{ padding:20px; }
 
 .card{
   background:#1e293b;
   padding:20px;
   margin:15px auto;
   border-radius:10px;
-  max-width:400px;
-  cursor:pointer;
+  max-width:600px;
 }
 
 .btn{
@@ -45,6 +42,14 @@ body{
   border-radius:8px;
   text-align:left;
 }
+
+input, select{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border-radius:6px;
+  border:none;
+}
 </style>
 </head>
 
@@ -59,38 +64,57 @@ body{
 
 <div id="adminPanel" style="display:none;">
 
-  <h2>👑 Welcome Admin</h2>
-  <p id="adminName"></p>
+<h2>👑 Admin Dashboard</h2>
+<p id="adminName"></p>
 
-  <button class="btn logout" onclick="logout()">Logout</button>
+<button class="btn logout" onclick="logout()">Logout</button>
 
-  <!-- 🔥 UPLOAD -->
-  <div class="card" onclick="goUpload()">
-    <h3>📤 Upload Dictation</h3>
-    <p>Add new dictation (audio link + text)</p>
-  </div>
-
-  <!-- 📊 USERS -->
-  <div class="card">
-    <h3>📊 All Users Performance</h3>
-
-    <select onchange="sortData(this.value)">
-      <option value="low">Lowest Error</option>
-      <option value="high">Highest Error</option>
-    </select>
-
-    <div id="data"></div>
-  </div>
-
+<!-- 📤 UPLOAD -->
+<div class="card">
+  <h3>📤 Upload Dictation</h3>
+  <button class="btn login" onclick="goUpload()">Go to Upload</button>
 </div>
 
+<!-- 📊 ANALYTICS -->
+<div class="card">
+  <h3>📊 Analytics</h3>
+  <p>Total Users: <span id="users">0</span></p>
+  <p>Total Tests: <span id="tests">0</span></p>
+  <p>Avg Error: <span id="avg">0%</span></p>
+</div>
+
+<!-- 🏆 LEADERBOARD -->
+<div class="card">
+  <h3>🏆 Top Performers</h3>
+  <div id="leaderboard"></div>
+</div>
+
+<!-- 🔍 FILTER -->
+<div class="card">
+  <h3>🔍 Search / Filter</h3>
+  <input placeholder="Search name..." onkeyup="searchUser(this.value)">
+</div>
+
+<!-- 📊 USERS -->
+<div class="card">
+  <h3>📊 Users</h3>
+
+  <select onchange="sortData(this.value)">
+    <option value="low">Lowest Error</option>
+    <option value="high">Highest Error</option>
+  </select>
+
+  <div id="data"></div>
+</div>
+
+</div>
 </div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
@@ -105,14 +129,13 @@ const provider = new GoogleAuthProvider();
 
 let allData=[];
 
-window.login = function(){
-  signInWithPopup(auth, provider);
-};
+// LOGIN
+window.login = ()=> signInWithPopup(auth, provider);
 
-window.logout = function(){
-  signOut(auth);
-};
+// LOGOUT
+window.logout = ()=> signOut(auth);
 
+// AUTH CHECK
 onAuthStateChanged(auth, async(user)=>{
 
   if(!user){
@@ -122,58 +145,101 @@ onAuthStateChanged(auth, async(user)=>{
   }
 
   if(user.email !== "xsahil900@gmail.com"){
-    alert("❌ You are not an Admin. Please use User login.");
+    alert("❌ Not Admin");
     signOut(auth);
     return;
   }
 
   loginBox.style.display="none";
   adminPanel.style.display="block";
-
-  adminName.innerText = "👤 " + user.displayName;
+  adminName.innerText = user.displayName;
 
   loadData();
 });
 
+// LOAD DATA
 async function loadData(){
-  const snap = await getDocs(collection(db,"results"));
-  allData=[];
 
-  snap.forEach(doc=>{
-    let d=doc.data();
+  const snap = await getDocs(collection(db,"results"));
+
+  allData=[];
+  let totalError=0;
+  let usersSet=new Set();
+
+  snap.forEach(docSnap=>{
+    let d=docSnap.data();
+    d.id=docSnap.id;
     d.error=parseFloat(d.error);
     allData.push(d);
+
+    totalError+=d.error;
+    usersSet.add(d.email);
   });
 
+  // analytics
+  users.innerText = usersSet.size;
+  tests.innerText = allData.length;
+  avg.innerText = (totalError/allData.length||0).toFixed(2)+"%";
+
+  showLeaderboard();
   showData(allData);
 }
 
-function showData(data){
+// LEADERBOARD
+function showLeaderboard(){
+  let top = [...allData].sort((a,b)=>a.error-b.error).slice(0,5);
+
   let html="";
-  data.forEach((d,i)=>{
+  top.forEach((d,i)=>{
+    html+=`#${i+1} ${d.name} (${d.error}%)<br>`;
+  });
+
+  document.getElementById("leaderboard").innerHTML=html;
+}
+
+// SHOW DATA
+function showData(data){
+
+  let html="";
+
+  data.forEach(d=>{
     html+=`
     <div class="dataBox">
-      <b>#${i+1}</b><br>
-      👤 ${d.name || "N/A"}<br>
-      📧 ${d.email || "N/A"}<br>
-      ❌ Error: ${d.error}%<br>
-      📅 ${d.date}
+      👤 ${d.name}<br>
+      📧 ${d.email}<br>
+      ❌ ${d.error}%<br>
+      📅 ${d.date}<br>
+      <button onclick="deleteData('${d.id}')">❌ Delete</button>
     </div>`;
   });
 
   document.getElementById("data").innerHTML=html;
 }
 
-window.sortData=function(type){
-  if(type==="low"){
-    allData.sort((a,b)=>a.error-b.error);
-  }else{
-    allData.sort((a,b)=>b.error-a.error);
+// DELETE
+window.deleteData = async(id)=>{
+  if(confirm("Delete this record?")){
+    await deleteDoc(doc(db,"results",id));
+    loadData();
   }
+};
+
+// SORT
+window.sortData = (type)=>{
+  if(type==="low") allData.sort((a,b)=>a.error-b.error);
+  else allData.sort((a,b)=>b.error-a.error);
+
   showData(allData);
 };
 
-window.goUpload=function(){
+// SEARCH
+window.searchUser = (name)=>{
+  let f = allData.filter(d=>d.name.toLowerCase().includes(name.toLowerCase()));
+  showData(f);
+};
+
+// NAV
+window.goUpload = ()=>{
   window.location.href="upload.html";
 };
 
