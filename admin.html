@@ -36,6 +36,8 @@ input, textarea, select{
   border-radius:5px;
   cursor:pointer;
 }
+.login{background:#22c55e;}
+.logout{background:#ef4444;}
 .upload{background:#10b981;color:white;}
 .delete{background:#dc2626;color:white;}
 .edit{background:#2563eb;color:white;}
@@ -47,9 +49,20 @@ input, textarea, select{
 
 <div class="overlay">
 
+<!-- 🔐 LOGIN -->
+<div id="loginBox" class="card">
+  <h2>🔐 Admin Login</h2>
+  <button class="btn login" onclick="login()">Login with Google</button>
+</div>
+
+<!-- 🔥 ADMIN PANEL -->
+<div id="adminPanel" style="display:none;">
+
 <div class="card">
 <h2>👑 Admin Panel</h2>
-<button class="btn goto" onclick="goAnalytics()">📊 Go to Analytics</button>
+<p id="adminName"></p>
+<button class="btn logout" onclick="logout()">Logout</button>
+<button class="btn goto" onclick="goAnalytics()">📊 Analytics</button>
 </div>
 
 <div class="card">
@@ -74,14 +87,61 @@ input, textarea, select{
 
 </div>
 
-<script>
+</div>
 
-function goAnalytics(){
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
+  authDomain: "steno-test-daecc.firebaseapp.com",
+  projectId: "steno-test-daecc"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+// LOGIN
+window.login = ()=> signInWithPopup(auth, provider);
+
+// LOGOUT
+window.logout = ()=> signOut(auth);
+
+// 🔐 AUTH CHECK
+onAuthStateChanged(auth,(user)=>{
+
+  if(!user){
+    loginBox.style.display="block";
+    adminPanel.style.display="none";
+    return;
+  }
+
+  // ❌ WRONG USER
+  if(user.email !== "xsahil900@gmail.com"){
+    alert("❌ You are not Admin");
+    signOut(auth);
+    return;
+  }
+
+  // ✅ ADMIN
+  loginBox.style.display="none";
+  adminPanel.style.display="block";
+
+  adminName.innerText = "👤 " + user.displayName;
+
+  loadDict();
+});
+
+// GO ANALYTICS
+window.goAnalytics=function(){
   window.location.href="analytics.html";
-}
+};
 
 // UPLOAD
-function uploadDict(){
+window.uploadDict=function(){
 
 let data=JSON.parse(localStorage.getItem("dictations")||"[]");
 
@@ -96,7 +156,7 @@ localStorage.setItem("dictations",JSON.stringify(data));
 
 alert("Uploaded");
 loadDict();
-}
+};
 
 // LOAD
 function loadDict(){
@@ -120,15 +180,15 @@ dictList.innerHTML=html;
 }
 
 // DELETE
-function del(i){
+window.del=function(i){
 let data=JSON.parse(localStorage.getItem("dictations"));
 data.splice(i,1);
 localStorage.setItem("dictations",JSON.stringify(data));
 loadDict();
-}
+};
 
 // EDIT
-function edit(i){
+window.edit=function(i){
 
 let data=JSON.parse(localStorage.getItem("dictations"));
 
@@ -140,9 +200,7 @@ if(a) data[i].audio=a;
 
 localStorage.setItem("dictations",JSON.stringify(data));
 loadDict();
-}
-
-loadDict();
+};
 
 </script>
 
