@@ -6,7 +6,8 @@
   <style>
     body {
       font-family: Arial;
-      background: url('https://images.unsplash.com/photo-1524995997946-a1c2e315a42f') no-repeat center/cover;
+      background: linear-gradient(rgba(0,0,0,0.6),rgba(0,0,0,0.7)),
+      url('https://images.unsplash.com/photo-1519389950473-47ba0277781c') no-repeat center/cover;
       text-align: center;
       margin: 0;
       padding: 0;
@@ -118,9 +119,36 @@
       font-weight:bold;
     }
 
+    /* 🔥 FEATURES NEW STYLE */
     .features{
-      margin-top:40px;
-      padding:10px;
+      margin-top:50px;
+      display:flex;
+      justify-content:center;
+      flex-wrap:wrap;
+      gap:20px;
+    }
+
+    .feature-box{
+      background: rgba(255,255,255,0.9);
+      color:black;
+      width:150px;
+      height:150px;
+      border-radius:50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:15px;
+      font-size:14px;
+      font-weight:bold;
+      box-shadow:0 4px 10px rgba(0,0,0,0.3);
+      transition:0.3s;
+    }
+
+    .feature-box:hover{
+      transform:scale(1.1);
+      background:#00c6ff;
+      color:white;
     }
 
   </style>
@@ -144,21 +172,21 @@
 
 </h1>
 
-<!-- 🔥 HERO -->
+<!-- HERO -->
 <div class="hero">
   <h2>Practice Like Real Exam 🚀</h2>
   <p>Improve Speed & Accuracy</p>
   <button onclick="go('test.html')">Start Practice</button>
 </div>
 
-<!-- 🔹 Menu -->
+<!-- MENU -->
 <div class="menu">
   <button onclick="go('test.html')">📝 Start Test</button>
   <button onclick="go('user.html')">📊 My Progress</button>
   <button onclick="go('leaderboard.html')">🏆 Leaderboard</button>
 </div>
 
-<!-- 🔥 CARDS -->
+<!-- CARDS -->
 <div class="container">
 
   <div class="card" onclick="go('test.html')">
@@ -178,12 +206,21 @@
 
 </div>
 
-<!-- 🔥 FEATURES -->
+<!-- 🔥 MODERN FEATURES -->
 <div class="features">
-  <h3>⚡ Features</h3>
-  <p>✔ Real Exam Simulation</p>
-  <p>✔ Automatic Error Calculation</p>
-  <p>✔ Detailed Result Analysis</p>
+
+  <div class="feature-box">
+    Real Exam<br>Simulation
+  </div>
+
+  <div class="feature-box">
+    Auto Error<br>Calculation
+  </div>
+
+  <div class="feature-box">
+    Detailed<br>Result
+  </div>
+
 </div>
 
 <script type="module">
@@ -221,7 +258,6 @@ function toggleMenu(){
   d.style.display = d.style.display === "block" ? "none" : "block";
 }
 
-// 🌗 THEME TOGGLE
 function toggleTheme(){
   let body = document.getElementById("body");
   body.classList.toggle("light");
