@@ -83,7 +83,6 @@
 
 </div>
 
-<!-- 🔥 FIREBASE + LOGIC -->
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -213,25 +212,12 @@ let ignoreMap = {
   "hon":"honourable","honourable":"hon"
 };
 
-// 🔥 FINAL LOGIC
+// 🔥 FINAL LOGIC (NO GUEST LIMIT)
 window.submitTest = function(){
 
   clearInterval(timer);
 
-  // 🔥 GUEST LIMIT
   let user = localStorage.getItem("user");
-
-  if(!user){
-    let count = localStorage.getItem("guestCount") || 0;
-    count++;
-
-    localStorage.setItem("guestCount", count);
-
-    if(count > 2){
-      alert("⚠️ Guest limit over! Please login.");
-      return;
-    }
-  }
 
   let typedText = document.getElementById("text").value;
 
@@ -304,7 +290,7 @@ window.submitTest = function(){
     "<br><br><b>Status:</b> "+status+
     "<br><br><button onclick='viewDetail()'>View Detail Result</button>";
 
-  // SAVE RESULT
+  // SAVE RESULT (only if logged in)
   if(user){
     addDoc(collection(db,"results"),{
       user:user,
