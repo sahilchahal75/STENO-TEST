@@ -11,7 +11,7 @@ body{
 }
 
 .overlay{
-  background:rgba(0,0,0,0.85);
+  background:rgba(0,0,0,0.9);
   min-height:100vh;
   display:flex;
   justify-content:center;
@@ -23,9 +23,17 @@ body{
   background:#1e293b;
   padding:25px;
   border-radius:12px;
-  width:90%;
-  max-width:400px;
+  width:95%;
+  max-width:500px;
   text-align:center;
+}
+
+input, textarea, select{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border:none;
+  border-radius:6px;
 }
 
 .btn{
@@ -39,6 +47,7 @@ body{
 
 .login{background:#22c55e;color:white;}
 .logout{background:#ef4444;color:white;}
+.upload{background:#3b82f6;color:white;}
 
 .dataBox{
   background:white;
@@ -55,30 +64,47 @@ body{
 
 <div class="overlay">
 
-<!-- 🔐 LOGIN BOX -->
+<!-- 🔐 LOGIN -->
 <div id="loginBox" class="box">
   <h2>👨‍💼 Admin Panel</h2>
-  <p>🔐 Admin Login Required</p>
   <button class="btn login" onclick="login()">Login with Google</button>
 </div>
 
-<!-- 📊 ADMIN PANEL -->
+<!-- 📊 PANEL -->
 <div id="adminPanel" class="box" style="display:none;">
 
-  <h2>👑 Admin Panel</h2>
+<h2>👑 Admin Panel</h2>
+<p id="adminName"></p>
 
-  <p id="adminName"></p>
+<button class="btn logout" onclick="logout()">Logout</button>
 
-  <button class="btn logout" onclick="logout()">Logout</button>
+<!-- 🔥 UPLOAD SECTION -->
+<h3>📤 Upload Dictation</h3>
 
-  <h3>📊 All Users Performance</h3>
+<input type="text" id="dName" placeholder="Dictation Name">
 
-  <select onchange="sortData(this.value)">
-    <option value="low">Lowest Error</option>
-    <option value="high">Highest Error</option>
-  </select>
+<select id="dType">
+  <option value="KC">KC Magazine</option>
+  <option value="Progressive">Progressive Magazine</option>
+  <option value="Exam">Real Exam Dictation</option>
+</select>
 
-  <div id="data"></div>
+<input type="file" id="audioFile">
+
+<textarea id="dText" placeholder="Paste full dictation text"></textarea>
+
+<button class="btn upload" onclick="uploadDictation()">Upload</button>
+
+<hr>
+
+<h3>📊 All Users Performance</h3>
+
+<select onchange="sortData(this.value)">
+  <option value="low">Lowest Error</option>
+  <option value="high">Highest Error</option>
+</select>
+
+<div id="data"></div>
 
 </div>
 
@@ -88,17 +114,20 @@ body{
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
   authDomain: "steno-test-daecc.firebaseapp.com",
-  projectId: "steno-test-daecc"
+  projectId: "steno-test-daecc",
+  storageBucket: "steno-test-daecc.appspot.com"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
 
 let allData=[];
@@ -117,29 +146,61 @@ window.logout = function(){
 onAuthStateChanged(auth, async(user)=>{
 
   if(!user){
-    document.getElementById("loginBox").style.display="block";
-    document.getElementById("adminPanel").style.display="none";
+    loginBox.style.display="block";
+    adminPanel.style.display="none";
     return;
   }
 
-  // ❌ WRONG USER
   if(user.email !== "xsahil900@gmail.com"){
     alert("❌ You are not an Admin. Please use User login.");
     signOut(auth);
     return;
   }
 
-  // ✅ ADMIN LOGIN
-  document.getElementById("loginBox").style.display="none";
-  document.getElementById("adminPanel").style.display="block";
+  loginBox.style.display="none";
+  adminPanel.style.display="block";
 
-  document.getElementById("adminName").innerText =
-    "👤 " + user.displayName;
+  adminName.innerText = "👤 " + user.displayName;
 
   loadData();
 });
 
-// LOAD DATA
+// 🔥 UPLOAD FUNCTION
+window.uploadDictation = async function(){
+
+  let name = dName.value;
+  let type = dType.value;
+  let text = dText.value;
+  let file = audioFile.files[0];
+
+  if(!name || !text || !file){
+    alert("⚠️ Fill all fields");
+    return;
+  }
+
+  // upload to storage
+  let storageRef = ref(storage, "audio/" + Date.now()+"_"+file.name);
+  await uploadBytes(storageRef, file);
+
+  let url = await getDownloadURL(storageRef);
+
+  // save to firestore
+  await addDoc(collection(db,"dictations"),{
+    name,
+    type,
+    text,
+    audio:url,
+    date:new Date().toLocaleString()
+  });
+
+  alert("✅ Dictation Uploaded");
+
+  dName.value="";
+  dText.value="";
+  audioFile.value="";
+};
+
+// LOAD USERS
 async function loadData(){
 
   const snap = await getDocs(collection(db,"results"));
@@ -155,7 +216,7 @@ async function loadData(){
   showData(allData);
 }
 
-// SHOW DATA
+// SHOW
 function showData(data){
 
   let html="";
@@ -171,7 +232,7 @@ function showData(data){
     </div>`;
   });
 
-  document.getElementById("data").innerHTML=html;
+  data.innerHTML=html;
 }
 
 // SORT
