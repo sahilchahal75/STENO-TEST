@@ -11,6 +11,12 @@
       margin: 0;
       padding: 0;
       color:white;
+      transition:0.3s;
+    }
+
+    .light{
+      background:#f2f2f2;
+      color:black;
     }
 
     h1 {
@@ -20,7 +26,6 @@
       position: relative;
     }
 
-    /* 🔥 3-dot menu */
     .menu-icon {
       position:absolute;
       right:15px;
@@ -54,6 +59,23 @@
       background:#eee;
     }
 
+    .hero{
+      margin-top:30px;
+    }
+
+    .hero h2{
+      font-size:28px;
+    }
+
+    .hero button{
+      padding:12px 20px;
+      border:none;
+      border-radius:8px;
+      background:#00c6ff;
+      font-weight:bold;
+      cursor:pointer;
+    }
+
     .container {
       margin-top: 30px;
       padding: 10px;
@@ -80,11 +102,6 @@
     .coming {
       color: gray;
       font-size: 14px;
-      margin-top: 5px;
-    }
-
-    .active {
-      border-left: 5px solid green;
     }
 
     .menu {
@@ -98,41 +115,53 @@
       border-radius:6px;
       cursor:pointer;
       background:#00c6ff;
-      color:black;
       font-weight:bold;
+    }
+
+    .features{
+      margin-top:40px;
+      padding:10px;
     }
 
   </style>
 </head>
 
-<body>
+<body id="body">
 
 <h1>
 🔥 Steno Practice Portal
 
-<!-- 🔥 3 DOT -->
 <span class="menu-icon" onclick="toggleMenu()">⋮</span>
 
 <div class="dropdown" id="dropdown">
   <div id="userName">👤 Guest</div>
   <hr>
-  <button onclick="login()">🔐 Login</button>
+  <button onclick="login()">🔐 User Login</button>
   <button onclick="logout()">🚪 Logout</button>
+  <button onclick="go('admin.html')">👨‍💼 Admin Login</button>
+  <button onclick="toggleTheme()">🌗 Toggle Theme</button>
 </div>
 
 </h1>
 
-<!-- 🔹 Top Menu -->
+<!-- 🔥 HERO -->
+<div class="hero">
+  <h2>Practice Like Real Exam 🚀</h2>
+  <p>Improve Speed & Accuracy</p>
+  <button onclick="go('test.html')">Start Practice</button>
+</div>
+
+<!-- 🔹 Menu -->
 <div class="menu">
   <button onclick="go('test.html')">📝 Start Test</button>
   <button onclick="go('user.html')">📊 My Progress</button>
   <button onclick="go('leaderboard.html')">🏆 Leaderboard</button>
-  <button onclick="go('admin.html')">👨‍💼 Admin Panel</button>
 </div>
 
+<!-- 🔥 CARDS -->
 <div class="container">
 
-  <div class="card active" onclick="go('test.html')">
+  <div class="card" onclick="go('test.html')">
     <h3>KC Magazine</h3>
     <p>Practice Dictation</p>
   </div>
@@ -147,6 +176,14 @@
     <p class="coming">Coming Soon</p>
   </div>
 
+</div>
+
+<!-- 🔥 FEATURES -->
+<div class="features">
+  <h3>⚡ Features</h3>
+  <p>✔ Real Exam Simulation</p>
+  <p>✔ Automatic Error Calculation</p>
+  <p>✔ Detailed Result Analysis</p>
 </div>
 
 <script type="module">
@@ -164,24 +201,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// 🔐 LOGIN
-window.login = function(){
-  signInWithPopup(auth, provider);
-}
+window.login = ()=> signInWithPopup(auth, provider);
+window.logout = ()=> signOut(auth);
 
-// 🚪 LOGOUT
-window.logout = function(){
-  signOut(auth);
-}
-
-// 👤 USER SHOW
 onAuthStateChanged(auth, (user)=>{
-  if(user){
-    document.getElementById("userName").innerText =
-      "👤 " + user.displayName;
-  }else{
-    document.getElementById("userName").innerText = "👤 Guest";
-  }
+  userName.innerText = user ? "👤 "+user.displayName : "👤 Guest";
 });
 
 </script>
@@ -195,6 +219,12 @@ function go(page){
 function toggleMenu(){
   let d = document.getElementById("dropdown");
   d.style.display = d.style.display === "block" ? "none" : "block";
+}
+
+// 🌗 THEME TOGGLE
+function toggleTheme(){
+  let body = document.getElementById("body");
+  body.classList.toggle("light");
 }
 
 </script>
