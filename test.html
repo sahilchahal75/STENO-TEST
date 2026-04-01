@@ -87,16 +87,13 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, addDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
   authDomain: "steno-test-daecc.firebaseapp.com",
-  projectId: "steno-test-daecc",
-  storageBucket: "steno-test-daecc.firebasestorage.app",
-  messagingSenderId: "636984354290",
-  appId: "1:636984354290:web:d1d9d7bcd3e88422b7776b"
+  projectId: "steno-test-daecc"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -109,29 +106,16 @@ window.login = function(){
   if(/Mobi|Android/i.test(navigator.userAgent)){
     signInWithRedirect(auth, provider);
   } else {
-    signInWithPopup(auth, provider)
-      .then((result)=>{
-        localStorage.setItem("user", result.user.uid);
-        alert("Login Successful ✅");
-      })
-      .catch(err=>alert(err.message));
+    signInWithPopup(auth, provider);
   }
 };
 
 // REDIRECT RESULT
-getRedirectResult(auth).then((result)=>{
-  if(result){
-    localStorage.setItem("user", result.user.uid);
-    alert("Login Successful ✅");
-  }
-});
+getRedirectResult(auth);
 
 // LOGOUT
 window.logout = function(){
-  signOut(auth).then(()=>{
-    localStorage.removeItem("user");
-    alert("Logout Successful");
-  });
+  signOut(auth);
 };
 
 // USER NAME
@@ -144,30 +128,49 @@ onAuthStateChanged(auth, (user)=>{
   }
 });
 
-// ================= NORMAL SCRIPT =================
+// ================= DATA =================
 
 let dictations = [];
 let originalText = "";
 
-// LOAD JSON
-fetch("dictations.json")
-.then(res=>res.json())
-.then(data=>{
-  dictations = data;
+// 🔥 LOAD JSON + FIREBASE
+async function loadDictations(){
 
   let select = document.getElementById("dictSelect");
+  select.innerHTML = "";
 
-  data.forEach((d,i)=>{
+  dictations = [];
+
+  // JSON
+  let jsonData = await fetch("dictations.json").then(res=>res.json());
+
+  jsonData.forEach(d=>{
+    dictations.push(d);
+
     let opt = document.createElement("option");
-    opt.value = i;
     opt.text = d.name;
     select.appendChild(opt);
   });
 
-  loadDictation();
-});
+  // FIREBASE
+  let snap = await getDocs(collection(db,"dictations"));
 
-// LOAD
+  snap.forEach(doc=>{
+    let d = doc.data();
+
+    dictations.push(d);
+
+    let opt = document.createElement("option");
+    opt.text = d.name + " (New)";
+    select.appendChild(opt);
+  });
+
+  loadDictation();
+}
+
+loadDictations();
+
+// LOAD SINGLE
 window.loadDictation = function(){
   let i = document.getElementById("dictSelect").value;
   originalText = dictations[i].text;
@@ -212,12 +215,12 @@ let ignoreMap = {
   "hon":"honourable","honourable":"hon"
 };
 
-// 🔥 FINAL LOGIC (NO GUEST LIMIT)
+// 🔥 SUBMIT
 window.submitTest = function(){
 
   clearInterval(timer);
 
-  let user = localStorage.getItem("user");
+  let user = auth.currentUser;
 
   let typedText = document.getElementById("text").value;
 
@@ -281,8 +284,12 @@ window.submitTest = function(){
 
   let status = errorPercent <= 8 ? "✅ QUALIFY" : "❌ DISQUALIFY";
 
+  // 🔥 NEW FEATURE
+  let typedWords = t.length;
+
   document.getElementById("result").innerHTML =
     "<b>Total Words:</b> "+o.length+
+    "<br><b>Typed Words:</b> "+typedWords+
     "<br><b>Full Mistakes:</b> "+full+
     "<br><b>Half Mistakes:</b> "+half+
     "<br><b>Total Error:</b> "+totalError+
@@ -290,10 +297,12 @@ window.submitTest = function(){
     "<br><br><b>Status:</b> "+status+
     "<br><br><button onclick='viewDetail()'>View Detail Result</button>";
 
-  // SAVE RESULT (only if logged in)
+  // SAVE
   if(user){
     addDoc(collection(db,"results"),{
-      user:user,
+      user:user.uid,
+      name:user.displayName,
+      email:user.email,
       error:errorPercent,
       totalError:totalError,
       date:new Date().toLocaleString()
@@ -304,7 +313,7 @@ window.submitTest = function(){
   localStorage.setItem("typed", typedText);
 };
 
-// DETAIL PAGE
+// DETAIL
 window.viewDetail = function(){
   window.location.href = "result.html";
 };
