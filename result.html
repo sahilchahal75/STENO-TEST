@@ -19,11 +19,16 @@
     .print-btn { background:#2563eb; color:white; }
     .back-btn { background:#10b981; color:white; }
 
-    /* 🔥 COLORS UPDATED */
     .correct { color:green; }
-    .wrong { color:#8B0000; font-weight:bold; } /* DARK RED */
+    .wrong { color:#8B0000; font-weight:bold; }
     .extra { color:blue; }
     .missing { color:black; font-weight:bold; }
+
+    /* 🔥 NEW UI IMPROVEMENT */
+    #comparison {
+      line-height: 1.8;
+      font-size: 15px;
+    }
 
   </style>
 </head>
@@ -32,7 +37,6 @@
 
 <h2 style="text-align:center;">Detail Result</h2>
 
-<!-- 🔥 BUTTONS -->
 <div style="text-align:center;">
   <button class="btn print-btn" onclick="printResult()">🖨️ Print / Save PDF</button>
   <button class="btn back-btn" onclick="goBack()">⬅ Back</button>
@@ -58,7 +62,7 @@ Qualify = Error % ≤ 8%
 
 <script>
 
-// PRINT FUNCTION
+// PRINT
 function printResult(){
   window.print();
 }
@@ -72,6 +76,13 @@ function goBack(){
 let originalText = localStorage.getItem("original");
 let typedText = localStorage.getItem("typed");
 
+// 🔥 SAFETY CHECK
+if(!originalText || !typedText){
+  alert("No result found. Please complete test first.");
+  window.location.href = "test.html";
+}
+
+// SPLIT
 let o = originalText.trim().split(/\s+/);
 let t = typedText.trim().split(/\s+/);
 
@@ -165,9 +176,13 @@ let totalError = full + (half * 0.5);
 let errorPercent = ((totalError / o.length) * 100).toFixed(2);
 let status = errorPercent <= 8 ? "✅ QUALIFY" : "❌ DISQUALIFY";
 
+// 🔥 NEW ADD
+let typedWords = t.length;
+
 // SUMMARY
 document.getElementById("summary").innerHTML =
   "Total Words: "+o.length+
+  "<br>Typed Words: "+typedWords+
   "<br>Full Mistake: "+full+
   "<br>Half Mistake: "+half+
   "<br>Missing Words: "+missing+
