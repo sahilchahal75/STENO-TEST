@@ -86,7 +86,7 @@
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, addDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // CONFIG
@@ -102,30 +102,12 @@ const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 // LOGIN
-window.login = function(){
-  if(/Mobi|Android/i.test(navigator.userAgent)){
-    signInWithRedirect(auth, provider);
-  } else {
-    signInWithPopup(auth, provider);
-  }
-};
+window.login = ()=> signInWithPopup(auth, provider);
+window.logout = ()=> signOut(auth);
 
-// REDIRECT RESULT
-getRedirectResult(auth);
-
-// LOGOUT
-window.logout = function(){
-  signOut(auth);
-};
-
-// USER NAME
+// USER
 onAuthStateChanged(auth, (user)=>{
-  let box = document.getElementById("userName");
-  if(user){
-    box.innerText = "👤 " + user.displayName;
-  } else {
-    box.innerText = "Guest User";
-  }
+  userName.innerText = user ? "👤 " + user.displayName : "Guest User";
 });
 
 // ================= DATA =================
@@ -138,7 +120,6 @@ async function loadDictations(){
 
   let select = document.getElementById("dictSelect");
   select.innerHTML = "";
-
   dictations = [];
 
   // JSON
@@ -146,7 +127,6 @@ async function loadDictations(){
 
   jsonData.forEach(d=>{
     dictations.push(d);
-
     let opt = document.createElement("option");
     opt.text = d.name;
     select.appendChild(opt);
@@ -157,7 +137,6 @@ async function loadDictations(){
 
   snap.forEach(doc=>{
     let d = doc.data();
-
     dictations.push(d);
 
     let opt = document.createElement("option");
@@ -170,11 +149,21 @@ async function loadDictations(){
 
 loadDictations();
 
-// LOAD SINGLE
+// 🔥 FIXED LOAD
 window.loadDictation = function(){
-  let i = document.getElementById("dictSelect").value;
-  originalText = dictations[i].text;
-  document.getElementById("audioPlayer").src = dictations[i].audio;
+
+  let select = document.getElementById("dictSelect");
+  let i = select.selectedIndex;
+
+  let data = dictations[i];
+
+  if(!data || !data.text){
+    alert("⚠️ Dictation data missing!");
+    return;
+  }
+
+  originalText = data.text;
+  document.getElementById("audioPlayer").src = data.audio;
 };
 
 // TIMER
@@ -220,7 +209,10 @@ window.submitTest = function(){
 
   clearInterval(timer);
 
-  let user = auth.currentUser;
+  if(!originalText || originalText.length < 20){
+    alert("⚠️ Dictation not loaded properly.");
+    return;
+  }
 
   let typedText = document.getElementById("text").value;
 
@@ -235,14 +227,10 @@ window.submitTest = function(){
     let ow = normalize(o[i]);
     let tw = normalize(t[j]);
 
-    if(ow === tw){
-      i++; j++;
-      continue;
-    }
+    if(ow === tw){ i++; j++; continue; }
 
     if(ignoreMap[ow] === tw || ignoreMap[tw] === ow){
-      i++; j++;
-      continue;
+      i++; j++; continue;
     }
 
     let matched = false;
@@ -250,30 +238,21 @@ window.submitTest = function(){
     for(let k=1; k<=5; k++){
 
       if(o[i+k] && normalize(o[i+k]) === tw){
-        full += k;
-        i += k;
-        matched = true;
-        break;
+        full += k; i += k; matched = true; break;
       }
 
       if(t[j+k] && normalize(t[j+k]) === ow){
-        full += k;
-        j += k;
-        matched = true;
-        break;
+        full += k; j += k; matched = true; break;
       }
     }
 
     if(matched) continue;
 
     if(ow+"s" === tw || ow === tw+"s"){
-      half++;
-      i++; j++;
-      continue;
+      half++; i++; j++; continue;
     }
 
-    full++;
-    i++; j++;
+    full++; i++; j++;
   }
 
   while(i < o.length){ full++; i++; }
@@ -281,10 +260,8 @@ window.submitTest = function(){
 
   let totalError = full + (half * 0.5);
   let errorPercent = ((totalError / o.length) * 100).toFixed(2);
-
   let status = errorPercent <= 8 ? "✅ QUALIFY" : "❌ DISQUALIFY";
 
-  // 🔥 NEW FEATURE
   let typedWords = t.length;
 
   document.getElementById("result").innerHTML =
@@ -298,6 +275,7 @@ window.submitTest = function(){
     "<br><br><button onclick='viewDetail()'>View Detail Result</button>";
 
   // SAVE
+  let user = auth.currentUser;
   if(user){
     addDoc(collection(db,"results"),{
       user:user.uid,
