@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Analytics</title>
+
+<style>
+body{
+  font-family:Arial;
+  background:#0f172a;
+  color:white;
+  padding:20px;
+}
+.card{
+  background:#1e293b;
+  padding:15px;
+  margin:10px 0;
+  border-radius:10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>📊 Analytics Dashboard</h2>
+
+<div class="card" id="stats"></div>
+
+<div class="card">
+<h3>👥 Users</h3>
+<div id="users"></div>
+</div>
+
+<button onclick="goBack()">⬅ Back</button>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
+  authDomain: "steno-test-daecc.firebaseapp.com",
+  projectId: "steno-test-daecc"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+async function load(){
+
+const snap = await getDocs(collection(db,"results"));
+
+let html="";
+let totalError=0;
+let count=0;
+
+snap.forEach(doc=>{
+let d=doc.data();
+
+html+=`
+<div class="card">
+${d.name||"No Name"}<br>
+${d.email||"No Email"}<br>
+Error: ${d.error}%
+</div>`;
+
+totalError+=parseFloat(d.error||0);
+count++;
+});
+
+users.innerHTML=html;
+
+let avg = count ? (totalError/count).toFixed(2) : 0;
+
+stats.innerHTML=`
+Total Users: ${count}<br>
+Total Tests: ${count}<br>
+Avg Error: ${avg}%
+`;
+
+}
+
+load();
+
+window.goBack=function(){
+window.location.href="admin.html";
+};
+
+</script>
+
+</body>
+</html>
