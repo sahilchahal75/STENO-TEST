@@ -25,6 +25,14 @@ body{
   max-width:500px;
 }
 
+input, textarea, select{
+  width:100%;
+  padding:8px;
+  margin-top:5px;
+  border-radius:5px;
+  border:none;
+}
+
 .btn{
   padding:8px;
   margin-top:5px;
@@ -37,6 +45,7 @@ body{
 .logout{background:#ef4444;}
 .delete{background:#dc2626;color:white;}
 .edit{background:#2563eb;color:white;}
+.upload{background:#10b981;color:white;}
 
 .dataBox{
   background:white;
@@ -67,13 +76,30 @@ body{
   <button class="btn logout" onclick="logout()">Logout</button>
 </div>
 
-<!-- UPLOAD -->
+<!-- 🔥 UPLOAD + MANAGE -->
 <div class="card">
-  <h3>📤 Upload Dictation</h3>
-  <button onclick="goUpload()">Go to Upload</button>
+  <h3>📤 Upload / Manage Dictation</h3>
+
+  <input type="text" id="name" placeholder="Dictation Name">
+  
+  <select id="category">
+    <option>KC Magazine</option>
+    <option>Progressive Magazine</option>
+    <option>Real Exam</option>
+  </select>
+
+  <input type="text" id="audio" placeholder="Audio Link">
+  <textarea id="text" placeholder="Dictation Text"></textarea>
+
+  <button class="btn upload" onclick="uploadDict()">Upload</button>
+
+  <hr>
+
+  <h4>📂 Existing Dictations</h4>
+  <div id="dictList"></div>
 </div>
 
-<!-- ANALYTICS -->
+<!-- 📊 ANALYTICS -->
 <div class="card">
   <h3>📊 Analytics</h3>
   <p id="totalUsers">Users: 0</p>
@@ -81,28 +107,10 @@ body{
   <p id="avgError">Avg Error: 0%</p>
 </div>
 
-<!-- SEARCH -->
-<div class="card">
-  <h3>🔍 Search User</h3>
-  <input type="text" placeholder="Search name..." onkeyup="searchUser(this.value)" style="width:100%;padding:8px;">
-</div>
-
-<!-- USERS -->
+<!-- 👥 USERS -->
 <div class="card">
   <h3>👥 Users Performance</h3>
-
-  <select onchange="sortData(this.value)">
-    <option value="low">Lowest Error</option>
-    <option value="high">Highest Error</option>
-  </select>
-
-  <div id="data"></div>
-</div>
-
-<!-- DICTATIONS -->
-<div class="card">
-  <h3 onclick="toggleDict()" style="cursor:pointer;">📂 Manage Dictations (Click)</h3>
-  <div id="dictList" style="display:none;"></div>
+  <div id="userData"></div>
 </div>
 
 </div>
@@ -126,16 +134,14 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-let allData=[];
-
 // LOGIN
 window.login = ()=> signInWithPopup(auth, provider);
 
 // LOGOUT
 window.logout = ()=> signOut(auth);
 
-// AUTH
-onAuthStateChanged(auth, async(user)=>{
+// AUTH CHECK
+onAuthStateChanged(auth, (user)=>{
 
   if(!user){
     loginBox.style.display="block";
@@ -144,7 +150,7 @@ onAuthStateChanged(auth, async(user)=>{
   }
 
   if(user.email !== "xsahil900@gmail.com"){
-    alert("❌ Not Admin");
+    alert("❌ You are not Admin");
     signOut(auth);
     return;
   }
@@ -154,93 +160,38 @@ onAuthStateChanged(auth, async(user)=>{
 
   adminName.innerText = "👤 " + user.displayName;
 
+  loadDictations();
   loadUsers();
 });
 
-// USERS LOAD
-async function loadUsers(){
+// 🔥 UPLOAD
+window.uploadDict=function(){
 
-  const snap = await getDocs(collection(db,"results"));
+  let name = document.getElementById("name").value;
+  let category = document.getElementById("category").value;
+  let audio = document.getElementById("audio").value;
+  let text = document.getElementById("text").value;
 
-  allData=[];
-  let totalError=0;
-
-  snap.forEach(doc=>{
-    let d=doc.data();
-    d.error=parseFloat(d.error);
-    allData.push(d);
-    totalError+=d.error;
-  });
-
-  document.getElementById("totalUsers").innerText="Users: "+allData.length;
-  document.getElementById("totalTests").innerText="Tests: "+allData.length;
-
-  let avg = allData.length ? (totalError/allData.length).toFixed(2) : 0;
-  document.getElementById("avgError").innerText="Avg Error: "+avg+"%";
-
-  showData(allData);
-}
-
-// SHOW USERS
-function showData(data){
-
-  let html="";
-
-  data.forEach((d,i)=>{
-    html+=`
-    <div class="dataBox">
-      <b>#${i+1}</b><br>
-      👤 ${d.name || "N/A"}<br>
-      📧 ${d.email || "N/A"}<br>
-      ❌ Error: ${d.error}%<br>
-      📅 ${d.date}
-    </div>`;
-  });
-
-  document.getElementById("data").innerHTML=html;
-}
-
-// SORT
-window.sortData=function(type){
-  if(type==="low"){
-    allData.sort((a,b)=>a.error-b.error);
-  }else{
-    allData.sort((a,b)=>b.error-a.error);
+  if(!name || !audio || !text){
+    alert("Fill all fields");
+    return;
   }
-  showData(allData);
-};
 
-// SEARCH
-window.searchUser=function(val){
-  let filtered = allData.filter(d =>
-    (d.name||"").toLowerCase().includes(val.toLowerCase())
-  );
-  showData(filtered);
-};
+  let data = JSON.parse(localStorage.getItem("dictations") || "[]");
 
-// 🔥 TOGGLE DICT
-window.toggleDict=function(){
+  data.push({name, category, audio, text});
 
-  let box = document.getElementById("dictList");
+  localStorage.setItem("dictations", JSON.stringify(data));
 
-  if(box.style.display==="none"){
-    box.style.display="block";
-    loadDictations();
-  }else{
-    box.style.display="none";
-  }
+  alert("✅ Uploaded");
+
+  loadDictations();
 };
 
 // LOAD DICTATIONS
 function loadDictations(){
 
   let data = JSON.parse(localStorage.getItem("dictations") || "[]");
-
-  if(data.length===0){
-    document.getElementById("dictList").innerHTML =
-      "<p>No dictations found</p>";
-    return;
-  }
 
   let html="";
 
@@ -256,7 +207,7 @@ function loadDictations(){
     `;
   });
 
-  document.getElementById("dictList").innerHTML=html;
+  document.getElementById("dictList").innerHTML = html;
 }
 
 // DELETE
@@ -264,7 +215,7 @@ window.deleteDict=function(i){
 
   let data = JSON.parse(localStorage.getItem("dictations") || "[]");
 
-  if(confirm("Delete this dictation?")){
+  if(confirm("Delete?")){
     data.splice(i,1);
     localStorage.setItem("dictations", JSON.stringify(data));
     loadDictations();
@@ -277,19 +228,48 @@ window.editDict=function(i){
   let data = JSON.parse(localStorage.getItem("dictations") || "[]");
 
   let name = prompt("Edit Name", data[i].name);
-  let audio = prompt("Edit Audio URL", data[i].audio);
+  let audio = prompt("Edit Audio", data[i].audio);
 
   if(name) data[i].name=name;
   if(audio) data[i].audio=audio;
 
   localStorage.setItem("dictations", JSON.stringify(data));
+
   loadDictations();
 };
 
-// GO UPLOAD
-window.goUpload=function(){
-  window.location.href="upload.html";
-};
+// 🔥 USERS DATA + ANALYTICS
+async function loadUsers(){
+
+  const snap = await getDocs(collection(db,"results"));
+
+  let html="";
+  let totalError=0;
+  let count=0;
+
+  snap.forEach(doc=>{
+    let d = doc.data();
+
+    html += `
+    <div class="dataBox">
+      👤 ${d.name || "N/A"}<br>
+      📧 ${d.email || "N/A"}<br>
+      ❌ Error: ${d.error}%<br>
+      📅 ${d.date}
+    </div>`;
+
+    totalError += parseFloat(d.error || 0);
+    count++;
+  });
+
+  document.getElementById("userData").innerHTML = html;
+
+  document.getElementById("totalUsers").innerText = "Users: " + count;
+  document.getElementById("totalTests").innerText = "Tests: " + count;
+
+  let avg = count ? (totalError/count).toFixed(2) : 0;
+  document.getElementById("avgError").innerText = "Avg Error: " + avg + "%";
+}
 
 </script>
 
