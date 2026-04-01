@@ -24,12 +24,10 @@
     .extra { color:blue; }
     .missing { color:black; font-weight:bold; }
 
-    /* 🔥 NEW UI IMPROVEMENT */
     #comparison {
-      line-height: 1.8;
-      font-size: 15px;
+      line-height:1.8;
+      font-size:15px;
     }
-
   </style>
 </head>
 
@@ -38,48 +36,33 @@
 <h2 style="text-align:center;">Detail Result</h2>
 
 <div style="text-align:center;">
-  <button class="btn print-btn" onclick="printResult()">🖨️ Print / Save PDF</button>
+  <button class="btn print-btn" onclick="printResult()">🖨️ Print</button>
   <button class="btn back-btn" onclick="goBack()">⬅ Back</button>
 </div>
 
 <div class="box" id="summary"></div>
 <div class="box" id="comparison"></div>
 
-<div class="box">
-<b>Formula:</b><br>
-Total Error = Full Mistake + (Half Mistake × 0.5)<br>
-Error % = (Total Error ÷ Total Words) × 100<br>
-Qualify = Error % ≤ 8%
-</div>
-
-<div class="box">
-<b>Colour Meaning:</b><br>
-<span class="correct">Green</span> → Correct<br>
-<span class="wrong">Dark Red</span> → Wrong / Spelling / Capital Error<br>
-<span class="extra">Blue</span> → Extra Word<br>
-<span class="missing">Black</span> → Missing Word
-</div>
-
 <script>
+
+// BACK
+function goBack(){
+  window.location.href="test.html";
+}
 
 // PRINT
 function printResult(){
   window.print();
 }
 
-// BACK
-function goBack(){
-  window.history.back();
-}
+// 🔥 SAFE LOAD
+let originalText = localStorage.getItem("original") || "";
+let typedText = localStorage.getItem("typed") || "";
 
-// LOAD DATA
-let originalText = localStorage.getItem("original");
-let typedText = localStorage.getItem("typed");
-
-// 🔥 SAFETY CHECK
-if(!originalText || !typedText){
-  alert("No result found. Please complete test first.");
-  window.location.href = "test.html";
+// अगर खाली है
+if(originalText.trim().length < 5){
+  alert("⚠️ No result found. Please complete test first.");
+  window.location.href="test.html";
 }
 
 // SPLIT
@@ -103,8 +86,9 @@ let i=0, j=0;
 let full=0, half=0;
 let missing=0, extra=0, wrong=0;
 
-let resultHTML = "";
+let resultHTML="";
 
+// 🔥 MAIN LOGIC (same)
 while(i < o.length && j < t.length){
 
   let ow = normalize(o[i]).toLowerCase();
@@ -112,17 +96,15 @@ while(i < o.length && j < t.length){
 
   if(ow === tw){
     resultHTML += "<span class='correct'>"+o[i]+"</span> ";
-    i++; j++;
-    continue;
+    i++; j++; continue;
   }
 
   if(ignoreMap[ow] === tw || ignoreMap[tw] === ow){
     resultHTML += "<span class='correct'>"+o[i]+"</span> ";
-    i++; j++;
-    continue;
+    i++; j++; continue;
   }
 
-  let found = false;
+  let found=false;
 
   for(let k=1; k<=3; k++){
 
@@ -131,9 +113,7 @@ while(i < o.length && j < t.length){
         resultHTML += "<span class='missing'>["+o[i+m]+"]</span> ";
         missing++; full++;
       }
-      i += k;
-      found = true;
-      break;
+      i+=k; found=true; break;
     }
 
     if(t[j+k] && normalize(t[j+k]).toLowerCase() === ow){
@@ -141,9 +121,7 @@ while(i < o.length && j < t.length){
         resultHTML += "<span class='extra'>"+t[j+m]+"</span> ";
         extra++; full++;
       }
-      j += k;
-      found = true;
-      break;
+      j+=k; found=true; break;
     }
   }
 
@@ -151,16 +129,14 @@ while(i < o.length && j < t.length){
 
   if(ow+"s" === tw || ow === tw+"s"){
     resultHTML += "<span class='wrong'>"+t[j]+"</span> ";
-    half++;
-    i++; j++;
-    continue;
+    half++; i++; j++; continue;
   }
 
   resultHTML += "<span class='wrong'>"+t[j]+"</span> ";
-  wrong++; full++;
-  i++; j++;
+  wrong++; full++; i++; j++;
 }
 
+// बाकी
 while(i < o.length){
   resultHTML += "<span class='missing'>["+o[i]+"]</span> ";
   missing++; full++; i++;
@@ -176,7 +152,6 @@ let totalError = full + (half * 0.5);
 let errorPercent = ((totalError / o.length) * 100).toFixed(2);
 let status = errorPercent <= 8 ? "✅ QUALIFY" : "❌ DISQUALIFY";
 
-// 🔥 NEW ADD
 let typedWords = t.length;
 
 // SUMMARY
@@ -192,7 +167,7 @@ document.getElementById("summary").innerHTML =
   "<br>Error %: "+errorPercent+
   "<br><br>Status: "+status;
 
-// COMPARISON
+// SHOW
 document.getElementById("comparison").innerHTML = resultHTML;
 
 </script>
