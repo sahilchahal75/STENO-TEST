@@ -76,9 +76,9 @@ body{
 <!-- ANALYTICS -->
 <div class="card">
   <h3>📊 Analytics</h3>
-  <p id="totalUsers"></p>
-  <p id="totalTests"></p>
-  <p id="avgError"></p>
+  <p id="totalUsers">Users: 0</p>
+  <p id="totalTests">Tests: 0</p>
+  <p id="avgError">Avg Error: 0%</p>
 </div>
 
 <!-- SEARCH -->
@@ -101,8 +101,8 @@ body{
 
 <!-- DICTATIONS -->
 <div class="card">
-  <h3>📂 Manage Dictations</h3>
-  <div id="dictList"></div>
+  <h3 onclick="toggleDict()" style="cursor:pointer;">📂 Manage Dictations (Click)</h3>
+  <div id="dictList" style="display:none;"></div>
 </div>
 
 </div>
@@ -134,7 +134,7 @@ window.login = ()=> signInWithPopup(auth, provider);
 // LOGOUT
 window.logout = ()=> signOut(auth);
 
-// AUTH CHECK
+// AUTH
 onAuthStateChanged(auth, async(user)=>{
 
   if(!user){
@@ -155,16 +155,14 @@ onAuthStateChanged(auth, async(user)=>{
   adminName.innerText = "👤 " + user.displayName;
 
   loadUsers();
-  loadDictations();
 });
 
-// USERS DATA
+// USERS LOAD
 async function loadUsers(){
 
   const snap = await getDocs(collection(db,"results"));
 
   allData=[];
-
   let totalError=0;
 
   snap.forEach(doc=>{
@@ -176,7 +174,9 @@ async function loadUsers(){
 
   document.getElementById("totalUsers").innerText="Users: "+allData.length;
   document.getElementById("totalTests").innerText="Tests: "+allData.length;
-  document.getElementById("avgError").innerText="Avg Error: "+(totalError/allData.length).toFixed(2)+"%";
+
+  let avg = allData.length ? (totalError/allData.length).toFixed(2) : 0;
+  document.getElementById("avgError").innerText="Avg Error: "+avg+"%";
 
   showData(allData);
 }
@@ -218,10 +218,29 @@ window.searchUser=function(val){
   showData(filtered);
 };
 
-// DICTATIONS
+// 🔥 TOGGLE DICT
+window.toggleDict=function(){
+
+  let box = document.getElementById("dictList");
+
+  if(box.style.display==="none"){
+    box.style.display="block";
+    loadDictations();
+  }else{
+    box.style.display="none";
+  }
+};
+
+// LOAD DICTATIONS
 function loadDictations(){
 
   let data = JSON.parse(localStorage.getItem("dictations") || "[]");
+
+  if(data.length===0){
+    document.getElementById("dictList").innerHTML =
+      "<p>No dictations found</p>";
+    return;
+  }
 
   let html="";
 
@@ -242,8 +261,10 @@ function loadDictations(){
 
 // DELETE
 window.deleteDict=function(i){
+
   let data = JSON.parse(localStorage.getItem("dictations") || "[]");
-  if(confirm("Delete?")){
+
+  if(confirm("Delete this dictation?")){
     data.splice(i,1);
     localStorage.setItem("dictations", JSON.stringify(data));
     loadDictations();
@@ -252,6 +273,7 @@ window.deleteDict=function(i){
 
 // EDIT
 window.editDict=function(i){
+
   let data = JSON.parse(localStorage.getItem("dictations") || "[]");
 
   let name = prompt("Edit Name", data[i].name);
