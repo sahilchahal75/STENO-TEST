@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: Arial;
-      background: linear-gradient(135deg,#1e3c72,#2a5298);
+      background: url('https://images.unsplash.com/photo-1524995997946-a1c2e315a42f') no-repeat center/cover;
       text-align: center;
       margin: 0;
       padding: 0;
@@ -14,9 +14,44 @@
     }
 
     h1 {
-      background: rgba(0,0,0,0.3);
+      background: rgba(0,0,0,0.5);
       padding: 15px;
       margin: 0;
+      position: relative;
+    }
+
+    /* 🔥 3-dot menu */
+    .menu-icon {
+      position:absolute;
+      right:15px;
+      top:15px;
+      font-size:22px;
+      cursor:pointer;
+    }
+
+    .dropdown {
+      position:absolute;
+      right:15px;
+      top:50px;
+      background:white;
+      color:black;
+      border-radius:8px;
+      display:none;
+      padding:10px;
+      min-width:150px;
+    }
+
+    .dropdown button {
+      width:100%;
+      padding:8px;
+      border:none;
+      background:none;
+      cursor:pointer;
+      text-align:left;
+    }
+
+    .dropdown button:hover {
+      background:#eee;
     }
 
     .container {
@@ -25,7 +60,7 @@
     }
 
     .card {
-      background: white;
+      background: rgba(255,255,255,0.95);
       color:black;
       margin: 15px auto;
       padding: 25px;
@@ -72,31 +107,41 @@
 
 <body>
 
-<h1>🔥 Steno Practice Portal</h1>
+<h1>
+🔥 Steno Practice Portal
+
+<!-- 🔥 3 DOT -->
+<span class="menu-icon" onclick="toggleMenu()">⋮</span>
+
+<div class="dropdown" id="dropdown">
+  <div id="userName">👤 Guest</div>
+  <hr>
+  <button onclick="login()">🔐 Login</button>
+  <button onclick="logout()">🚪 Logout</button>
+</div>
+
+</h1>
 
 <!-- 🔹 Top Menu -->
 <div class="menu">
   <button onclick="go('test.html')">📝 Start Test</button>
   <button onclick="go('user.html')">📊 My Progress</button>
   <button onclick="go('leaderboard.html')">🏆 Leaderboard</button>
-  <button onclick="go('admin.html')">👨‍💼 Admin Panel</button> <!-- 🔥 Added -->
+  <button onclick="go('admin.html')">👨‍💼 Admin Panel</button>
 </div>
 
 <div class="container">
 
-  <!-- KC Magazine -->
   <div class="card active" onclick="go('test.html')">
     <h3>KC Magazine</h3>
     <p>Practice Dictation</p>
   </div>
 
-  <!-- Progressive -->
   <div class="card">
     <h3>Progressive Magazine</h3>
     <p class="coming">Coming Soon</p>
   </div>
 
-  <!-- Real Exam -->
   <div class="card">
     <h3>Real Exam Dictation</h3>
     <p class="coming">Coming Soon</p>
@@ -104,10 +149,52 @@
 
 </div>
 
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
+  authDomain: "steno-test-daecc.firebaseapp.com",
+  projectId: "steno-test-daecc"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+// 🔐 LOGIN
+window.login = function(){
+  signInWithPopup(auth, provider);
+}
+
+// 🚪 LOGOUT
+window.logout = function(){
+  signOut(auth);
+}
+
+// 👤 USER SHOW
+onAuthStateChanged(auth, (user)=>{
+  if(user){
+    document.getElementById("userName").innerText =
+      "👤 " + user.displayName;
+  }else{
+    document.getElementById("userName").innerText = "👤 Guest";
+  }
+});
+
+</script>
+
 <script>
 
 function go(page){
   window.location.href = page;
+}
+
+function toggleMenu(){
+  let d = document.getElementById("dropdown");
+  d.style.display = d.style.display === "block" ? "none" : "block";
 }
 
 </script>
