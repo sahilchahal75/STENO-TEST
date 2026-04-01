@@ -7,47 +7,35 @@
 body{
   margin:0;
   font-family:Arial;
-  background:url('https://images.unsplash.com/photo-1518770660439-4636190af475') no-repeat center/cover;
-}
-
-.overlay{
-  background:rgba(0,0,0,0.9);
-  min-height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
+  background:#0f172a;
   color:white;
-}
-
-.box{
-  background:#1e293b;
-  padding:25px;
-  border-radius:12px;
-  width:95%;
-  max-width:500px;
   text-align:center;
 }
 
-input, textarea, select{
-  width:100%;
-  padding:10px;
-  margin-top:10px;
-  border:none;
-  border-radius:6px;
+.container{
+  padding:20px;
+}
+
+.card{
+  background:#1e293b;
+  padding:20px;
+  margin:15px auto;
+  border-radius:10px;
+  max-width:400px;
+  cursor:pointer;
 }
 
 .btn{
   padding:10px;
+  width:100%;
+  margin-top:10px;
   border:none;
   border-radius:6px;
-  margin-top:10px;
-  width:100%;
   cursor:pointer;
 }
 
 .login{background:#22c55e;color:white;}
 .logout{background:#ef4444;color:white;}
-.upload{background:#3b82f6;color:white;}
 
 .dataBox{
   background:white;
@@ -62,49 +50,37 @@ input, textarea, select{
 
 <body>
 
-<div class="overlay">
+<div class="container">
 
-<!-- 🔐 LOGIN -->
-<div id="loginBox" class="box">
+<div id="loginBox">
   <h2>👨‍💼 Admin Panel</h2>
-  <button class="btn login" onclick="login()">Login with Google</button>
+  <button class="btn login" onclick="login()">Login</button>
 </div>
 
-<!-- 📊 PANEL -->
-<div id="adminPanel" class="box" style="display:none;">
+<div id="adminPanel" style="display:none;">
 
-<h2>👑 Admin Panel</h2>
-<p id="adminName"></p>
+  <h2>👑 Welcome Admin</h2>
+  <p id="adminName"></p>
 
-<button class="btn logout" onclick="logout()">Logout</button>
+  <button class="btn logout" onclick="logout()">Logout</button>
 
-<!-- 🔥 UPLOAD SECTION -->
-<h3>📤 Upload Dictation</h3>
+  <!-- 🔥 UPLOAD -->
+  <div class="card" onclick="goUpload()">
+    <h3>📤 Upload Dictation</h3>
+    <p>Add new dictation (audio link + text)</p>
+  </div>
 
-<input type="text" id="dName" placeholder="Dictation Name">
+  <!-- 📊 USERS -->
+  <div class="card">
+    <h3>📊 All Users Performance</h3>
 
-<select id="dType">
-  <option value="KC">KC Magazine</option>
-  <option value="Progressive">Progressive Magazine</option>
-  <option value="Exam">Real Exam Dictation</option>
-</select>
+    <select onchange="sortData(this.value)">
+      <option value="low">Lowest Error</option>
+      <option value="high">Highest Error</option>
+    </select>
 
-<input type="file" id="audioFile">
-
-<textarea id="dText" placeholder="Paste full dictation text"></textarea>
-
-<button class="btn upload" onclick="uploadDictation()">Upload</button>
-
-<hr>
-
-<h3>📊 All Users Performance</h3>
-
-<select onchange="sortData(this.value)">
-  <option value="low">Lowest Error</option>
-  <option value="high">Highest Error</option>
-</select>
-
-<div id="data"></div>
+    <div id="data"></div>
+  </div>
 
 </div>
 
@@ -114,35 +90,29 @@ input, textarea, select{
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
   authDomain: "steno-test-daecc.firebaseapp.com",
-  projectId: "steno-test-daecc",
-  storageBucket: "steno-test-daecc.appspot.com"
+  projectId: "steno-test-daecc"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
 
 let allData=[];
 
-// LOGIN
 window.login = function(){
   signInWithPopup(auth, provider);
 };
 
-// LOGOUT
 window.logout = function(){
   signOut(auth);
 };
 
-// AUTH CHECK
 onAuthStateChanged(auth, async(user)=>{
 
   if(!user){
@@ -165,46 +135,8 @@ onAuthStateChanged(auth, async(user)=>{
   loadData();
 });
 
-// 🔥 UPLOAD FUNCTION
-window.uploadDictation = async function(){
-
-  let name = dName.value;
-  let type = dType.value;
-  let text = dText.value;
-  let file = audioFile.files[0];
-
-  if(!name || !text || !file){
-    alert("⚠️ Fill all fields");
-    return;
-  }
-
-  // upload to storage
-  let storageRef = ref(storage, "audio/" + Date.now()+"_"+file.name);
-  await uploadBytes(storageRef, file);
-
-  let url = await getDownloadURL(storageRef);
-
-  // save to firestore
-  await addDoc(collection(db,"dictations"),{
-    name,
-    type,
-    text,
-    audio:url,
-    date:new Date().toLocaleString()
-  });
-
-  alert("✅ Dictation Uploaded");
-
-  dName.value="";
-  dText.value="";
-  audioFile.value="";
-};
-
-// LOAD USERS
 async function loadData(){
-
   const snap = await getDocs(collection(db,"results"));
-
   allData=[];
 
   snap.forEach(doc=>{
@@ -216,11 +148,8 @@ async function loadData(){
   showData(allData);
 }
 
-// SHOW
 function showData(data){
-
   let html="";
-
   data.forEach((d,i)=>{
     html+=`
     <div class="dataBox">
@@ -232,10 +161,9 @@ function showData(data){
     </div>`;
   });
 
-  data.innerHTML=html;
+  document.getElementById("data").innerHTML=html;
 }
 
-// SORT
 window.sortData=function(type){
   if(type==="low"){
     allData.sort((a,b)=>a.error-b.error);
@@ -243,6 +171,10 @@ window.sortData=function(type){
     allData.sort((a,b)=>b.error-a.error);
   }
   showData(allData);
+};
+
+window.goUpload=function(){
+  window.location.href="upload.html";
 };
 
 </script>
