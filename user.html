@@ -1,63 +1,81 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>My Progress</title>
+<title>My Progress</title>
 
-  <style>
-    body {
-      font-family: Arial;
-      background:#f2f2f2;
-      padding:10px;
-    }
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    h2 {
-      text-align:center;
-    }
+<style>
+body{
+  font-family:Arial;
+  margin:0;
+  background:#0f172a;
+  color:white;
+}
 
-    .box {
-      background:#fff;
-      padding:15px;
-      border-radius:10px;
-      margin-bottom:10px;
-    }
+.top{
+  background:#1e293b;
+  padding:15px;
+  display:flex;
+  justify-content:space-between;
+}
 
-    .btn {
-      padding:10px;
-      border:none;
-      border-radius:6px;
-      margin-top:10px;
-      width:100%;
-      cursor:pointer;
-    }
+.tabs button{
+  margin:5px;
+  padding:8px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  background:#38bdf8;
+}
 
-    .login-btn {
-      background:#007bff;
-      color:white;
-      font-size:16px;
-    }
+.box{
+  background:#1e293b;
+  margin:10px;
+  padding:10px;
+  border-radius:8px;
+}
 
-    .home-btn {
-      background:#28a745;
-      color:white;
-    }
-  </style>
+.record{
+  background:white;
+  color:black;
+  margin:8px 0;
+  padding:8px;
+  border-radius:6px;
+}
+</style>
 </head>
 
 <body>
 
-<h2>📊 My Progress</h2>
+<div class="top">
+  <div id="userInfo">User</div>
+</div>
 
-<div id="content"></div>
+<h2 style="text-align:center;">📊 My Performance</h2>
 
-<button class="btn home-btn" onclick="goHome()">🏠 Back to Home</button>
+<div class="tabs" style="text-align:center;">
+  <button onclick="filter('all')">Overall</button>
+  <button onclick="filter('KC')">KC Magazine</button>
+  <button onclick="filter('Progressive')">Progressive</button>
+  <button onclick="filter('Exam')">Real Exam</button>
+</div>
+
+<div class="box">
+  <canvas id="graph"></canvas>
+</div>
+
+<div class="box">
+  <h3>📄 Last 10 Records</h3>
+  <div id="records"></div>
+</div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// 🔥 CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyAcTnGm3ZR5Zud7ONRxU_ID_vTZokfRif0",
   authDomain: "steno-test-daecc.firebaseapp.com",
@@ -67,86 +85,97 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
 
-// 🔐 LOGIN FUNCTION
-window.loginUser = function(){
-  signInWithPopup(auth, provider)
-    .then(()=>{
-      location.reload();
-    })
-    .catch(err=>alert(err.message));
-};
+let allData = [];
+let chart;
 
-// 🧠 USER CHECK
-onAuthStateChanged(auth, async (user) => {
+// AUTH
+onAuthStateChanged(auth, async(user)=>{
 
-  let content = document.getElementById("content");
-
-  // ❌ NOT LOGGED IN
   if(!user){
-    content.innerHTML = `
-      <div class="box" style="text-align:center;">
-        <h3>❌ Please login first</h3>
-        <button class="btn login-btn" onclick="loginUser()">
-          🔐 Login with Google
-        </button>
-      </div>
-    `;
+    alert("Please login first");
     return;
   }
 
-  // ✅ LOGGED IN
-  let q = query(collection(db, "results"), where("user", "==", user.uid));
-  let querySnapshot = await getDocs(q);
+  document.getElementById("userInfo").innerText =
+    "👤 " + user.displayName;
 
-  let totalTest = 0;
-  let totalError = 0;
-  let best = 999;
-  let historyHTML = "";
+  const snap = await getDocs(collection(db,"results"));
 
-  querySnapshot.forEach((doc) => {
+  allData = [];
+
+  snap.forEach(doc=>{
     let d = doc.data();
-
-    totalTest++;
-    let err = parseFloat(d.error);
-
-    totalError += err;
-    if(err < best) best = err;
-
-    historyHTML += `
-      <div style="border-bottom:1px solid #ddd;padding:5px;">
-        📅 ${d.date} <br>
-        ❌ Error: ${err}%
-      </div>
-    `;
+    if(d.email === user.email){
+      d.error = parseFloat(d.error);
+      allData.push(d);
+    }
   });
 
-  let avg = totalTest ? (totalError / totalTest).toFixed(2) : 0;
-
-  content.innerHTML = `
-    <div class="box">
-      <b>👤 Name:</b> ${user.displayName}
-    </div>
-
-    <div class="box">
-      <b>Total Tests:</b> ${totalTest}<br>
-      <b>Average Error:</b> ${avg}%<br>
-      <b>Best Score:</b> ${best==999?0:best}%
-    </div>
-
-    <div class="box">
-      <b>📜 Test History:</b><br>
-      ${historyHTML || "No tests yet"}
-    </div>
-  `;
-
+  filter("all");
 });
 
-// BACK
-window.goHome = function(){
-  window.location.href = "index.html";
-};
+// FILTER
+window.filter = function(type){
+
+  let data = allData;
+
+  if(type !== "all"){
+    data = allData.filter(d => d.category === type);
+  }
+
+  data = data.slice(-10); // last 10
+
+  showGraph(data);
+  showRecords(data);
+}
+
+// GRAPH
+function showGraph(data){
+
+  let labels = data.map((d,i)=>"Test "+(i+1));
+  let values = data.map(d=>d.error);
+
+  if(chart) chart.destroy();
+
+  chart = new Chart(document.getElementById("graph"),{
+    type:'line',
+    data:{
+      labels:labels,
+      datasets:[{
+        label:'Error %',
+        data:values
+      }]
+    }
+  });
+}
+
+// RECORDS
+function showRecords(data){
+
+  let html="";
+
+  data.reverse().forEach(d=>{
+
+    html += `
+    <div class="record">
+      <b>${d.dictationName || "Dictation"}</b><br>
+      📂 ${d.category || "General"}<br>
+      📊 Error: ${d.error}%<br>
+      📝 Words: ${d.totalWords || "-"}<br>
+      ⌨ Typed: ${d.typedWords || "-"}<br>
+      📅 ${d.date}<br>
+      <button onclick="detail()">View Detail</button>
+    </div>`;
+  });
+
+  document.getElementById("records").innerHTML = html;
+}
+
+// DETAIL
+window.detail = function(){
+  window.location.href = "result.html";
+}
 
 </script>
 
